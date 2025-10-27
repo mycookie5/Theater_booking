@@ -29,3 +29,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# backend files
+backend/bin*
+backend/bin/Debug/net8.0/Backend.dll
+backend/bin/Debug/net8.0/Backend.exe
+backend/bin/Debug/net8.0/Backend.pdb
+backend/obj/Debug/net8.0/apphost.exe
+backend/obj/Debug/net8.0/Backend.AssemblyInfo.cs
+backend/obj/Debug/net8.0/Backend.AssemblyInfoInputs.cache
+backend/obj/Debug/net8.0/Backend.dll
+backend/obj/Debug/net8.0/Backend.pdb
+backend/obj/Debug/net8.0/Backend.sourcelink.json
+backend/obj/Debug/net8.0/ref/Backend.dll
+backend/obj/Debug/net8.0/refint/Backend.dll
