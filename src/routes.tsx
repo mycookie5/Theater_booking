@@ -1,21 +1,14 @@
-import type { JSX } from "react";
-import Booking from "./pages/booking";
-import Events from "./pages/events";
-import Home from "./pages/home";
-import Mytickets from "./pages/mytickets";
+import type Route from './interface/Route.tsx';
+import { createElement } from 'react';
 
+// page components
+// general page
+import NotFoundPage from './pages/NotFoundPage.tsx';
 
-interface Route {
-    element: JSX.Element;
-    path: string;
-    menuLabel?: string;
-}
-
-const routes: Route[] = [
-    { element: <Home />, path: '', menuLabel: 'Home' },
-    { element: <Booking />, path: '/booking', menuLabel: 'Booking' },
-    { element: <Events />, path: '/events', menuLabel: 'Events' },
-    { element: <Mytickets />, path: '/mytickets', menuLabel: 'My Tickets' }
-];
-
-export default routes;
+export default [
+    NotFoundPage,
+]
+    // map the route property of each page component to a Route
+    .map(x => (({ element: createElement(x), ...x.route }) as Route))
+    // sort by index (and if an item has no index, sort as index 0)
+    .sort((a, b) => (a.index || 0) - (b.index || 0));
