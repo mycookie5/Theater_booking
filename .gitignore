@@ -43,3 +43,4 @@ backend/obj/Debug/net8.0/Backend.pdb
 backend/obj/Debug/net8.0/Backend.sourcelink.json
 backend/obj/Debug/net8.0/ref/Backend.dll
 backend/obj/Debug/net8.0/refint/Backend.dll
+backend/_db.sqlite3
