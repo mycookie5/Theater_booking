@@ -11,6 +11,7 @@ import Home from './pages/Home.tsx';
 import About from './pages/About.tsx';
 import MyTickets from './pages/Mytickets.tsx';
 import Admin from './pages/Admin.tsx';
+import Events from './pages/Events.tsx';
 
 export default [
     NotFoundPage,
@@ -20,6 +21,7 @@ export default [
     About,
     MyTickets,
     Admin,
+    Events,
     Logout
 ]
     // map the route property of each page component to a Route
