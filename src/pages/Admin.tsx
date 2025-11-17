@@ -1,3 +1,5 @@
+import authUser from '../hooks/authUser';
+
 Admin.route = {
     path: '/admin',
     menuLabel: 'Admin',
@@ -5,5 +7,10 @@ Admin.route = {
 };
 
 export default function Admin() {
+    const { isUserAdmin } = authUser();
+
+    if (!isUserAdmin) {
+        return <div>Access denied. You do not have permission to view this page.</div>;
+    }
     return <div>Welcome to the Admin Page!</div>;
 }
