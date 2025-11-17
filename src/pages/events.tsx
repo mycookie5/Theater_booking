@@ -54,12 +54,10 @@ export default function Events() {
         });
     };
 
-    // Filter by search term with relevance-based sorting
     const filteredEvents = events
         .filter(event => event.Opponent.toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => {
             if (!searchTerm) {
-                // If no search term, just sort by date
                 return new Date(a.date).getTime() - new Date(b.date).getTime();
             }
 
@@ -70,11 +68,9 @@ export default function Events() {
             const aStartsWith = aOpponent.startsWith(searchLower);
             const bStartsWith = bOpponent.startsWith(searchLower);
 
-            // Prioritize matches that start with search term
             if (aStartsWith && !bStartsWith) return -1;
             if (!aStartsWith && bStartsWith) return 1;
 
-            // If both start with or both don't start with search term, sort by date
             return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
 
@@ -82,7 +78,6 @@ export default function Events() {
         <Container className="events-page-container py-4">
             <h1 className="mb-4">Upcoming Home Games</h1>
 
-            {/* Search Bar */}
             <Row className="mb-4">
                 <Col xs={12} md={8} lg={6}>
                     <Form.Group>
@@ -109,26 +104,15 @@ export default function Events() {
                 <Row xs={1} md={2} lg={3} className="g-4">
                     {filteredEvents.map(event => (
                         <Col key={event.id}>
-                            <Card
-                                className="h-100 shadow-sm"
-                                style={{
-                                    backgroundImage: 'url(../../public/images/trophy.png)',
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
-                                    position: 'relative'
-                                }}
-                            >
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                    backdropFilter: 'blur(2px)'
-                                }} />
-                                <Card.Body className="d-flex flex-column" style={{ position: 'relative', zIndex: 1 }}>
+                            <Card className="h-100 shadow-sm">
+                                <Card.Img
+                                    variant="top"
+                                    src="../../public/images/sport/trophy.png"
+                                    alt="Championship Trophy"
+                                    className="img-fluid p-3"
+                                    style={{ objectFit: 'contain', height: '200px' }}
+                                />
+                                <Card.Body className="d-flex flex-column">
                                     <Card.Title className="text-primary">
                                         Thunderbolts FC vs {event.Opponent}
                                     </Card.Title>
