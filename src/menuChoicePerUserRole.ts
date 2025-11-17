@@ -1,6 +1,6 @@
 export default {
     visitor: [
-        'Home', 'Login', 'Register', 'About'
+        'Home', 'About', 'Login', 'Register'
     ],
     user: [
         'Home', 'My Tickets', 'About', 'Logout'
