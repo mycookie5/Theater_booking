@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 
+
+export interface UserData {
+    id: number;
+    created: Date;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+}
+
 export default function authUser() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userData, setUserData] = useState(null);
+    const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
+    const [userData, setUserData] = useState<UserData | null>(null);
     useEffect(() => {
         fetch('/api/login', { credentials: 'include' })
             .then(res => res.ok ? res.json() : null)
             .then(json => {
                 if (json && !json.error) {
-                    if (json.role === 'admin' || json.role === 'user') {
-                        setIsLoggedIn(true);
+                    if (json.role === 'admin') {
+                        setIsUserAdmin(true);
                         setUserData(json);
-                    } else {
-                        setIsLoggedIn(false);
-                        setUserData(null);
+                    }
+                    else {
+                        setIsUserAdmin(false);
+                        setUserData(json);
                     }
                 }
             })
@@ -22,5 +33,5 @@ export default function authUser() {
             });
     }, []);
 
-    return { isLoggedIn, userData };
+    return { isUserAdmin, userData };
 }
