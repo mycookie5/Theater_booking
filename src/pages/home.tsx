@@ -1,4 +1,4 @@
-import { Button } from 'react-bootstrap';
+import { Button, Container } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
 Home.route = {
@@ -9,7 +9,7 @@ Home.route = {
 export default function Home() {
     const navigate = useNavigate();
 
-    return <div className="home-page-container">
+    return <Container className="home-page-container">
         <img
             src="../../public/images/sport/homepage-image.jpg"
             alt="Players Celebrating"
@@ -25,5 +25,5 @@ export default function Home() {
             Browse Upcoming Events
         </Button>
         <p>Your one-stop destination for all Thunderbolts FC event tickets. Browse, select, and purchase tickets for your favorite football team with ease.</p>
-    </div>;
+    </Container>;
 }
