@@ -27,7 +27,6 @@ export default function Events() {
         fetch('/api/events')
             .then(res => res.ok ? res.json() : [])
             .then(data => {
-                // Filter for Home games only
                 const homeEvents = data.filter((event: Event) => event['Home/Away'] === 'Home');
                 setEvents(homeEvents);
                 setLoading(false);
@@ -40,7 +39,7 @@ export default function Events() {
 
     const handleBooking = (eventId: number) => {
         if (userData) {
-            navigate(`/bookings?eventId=${eventId}`);
+            navigate(`/booking/${eventId}`);
         }
     };
 

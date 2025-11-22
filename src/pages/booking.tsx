@@ -1,7 +1,6 @@
 Booking.route = {
-    path: '/booking',
+    path: '/booking/:id',
     menuLabel: 'Booking',
-    index: 10
 };
 
 export default function Booking() {
