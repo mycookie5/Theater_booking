@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import authUser from '../hooks/authUser';
 
@@ -25,6 +25,9 @@ export default function Booking() {
     const [seatCount, setSeatCount] = useState<number>(0);
     const [seats, setSeats] = useState<Seat[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [booking, setBooking] = useState<boolean>(false);
+    const [bookingSuccess, setBookingSuccess] = useState<boolean>(false);
+    const [bookingError, setBookingError] = useState<string | null>(null);
 
     useEffect(() => {
         fetch('/api/seats')
@@ -84,6 +87,59 @@ export default function Booking() {
         setSeatCount(prev => Math.max(0, prev - 1));
     };
 
+    const handleBooking = async () => {
+        if (!selectedSection || seatCount === 0 || !userData || !id) return;
+
+        setBooking(true);
+        setBookingError(null);
+
+        try {
+            const selectedSeat = seats.find(s => s.section === selectedSection);
+            if (!selectedSeat) return;
+
+            const ticketData = {
+                event_id: parseInt(id),
+                user_id: userData.id,
+                seat_id: selectedSeat.id,
+                quantity: seatCount
+            };
+
+            console.log('Creating ticket with data:', ticketData);
+
+            // Create ticket
+            const ticketResponse = await fetch('/api/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ticketData)
+            });
+
+            if (!ticketResponse.ok) {
+                const errorText = await ticketResponse.text();
+                console.error('Ticket creation failed:', errorText);
+                throw new Error('Failed to create ticket');
+            }
+
+            console.log('Ticket created successfully');
+
+            // Update available seats
+            await fetch(`/api/seats/${selectedSeat.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    available_seats: selectedSeat.available_seats - seatCount
+                })
+            });
+
+            setBookingSuccess(true);
+
+        } catch (error) {
+            console.error('Booking error:', error);
+            setBookingError('Booking failed');
+        } finally {
+            setBooking(false);
+        }
+    };
+
     if (!userData) {
         return (
             <Container className="py-5">
@@ -114,6 +170,36 @@ export default function Booking() {
         <Container className="booking-page-container py-4">
             <h1 className="mb-4">Book Your Seats</h1>
             <p className="text-muted mb-4">Event ID: {id}</p>
+
+            {/* Success Modal */}
+            <Modal show={bookingSuccess} onHide={() => { setBookingSuccess(false); navigate('/events'); }} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Booking Successful!</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Your tickets have been booked successfully.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="success" onClick={() => { setBookingSuccess(false); navigate('/events'); }}>
+                        OK
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Error Modal */}
+            <Modal show={!!bookingError} onHide={() => setBookingError(null)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Booking Failed</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {bookingError}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="danger" onClick={() => setBookingError(null)}>
+                        Close
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <Row className="mb-4">
                 <Col xs={12}>
@@ -311,11 +397,14 @@ export default function Booking() {
                         variant="success"
                         size="lg"
                         className="w-100"
-                        disabled={!selectedSection || seatCount === 0}
+                        disabled={!selectedSection || seatCount === 0 || booking}
+                        onClick={handleBooking}
                     >
-                        {selectedSection && seatCount > 0
-                            ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}`
-                            : 'Select Section and Seats'}
+                        {booking
+                            ? 'Booking...'
+                            : selectedSection && seatCount > 0
+                                ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}`
+                                : 'Select Section and Seats'}
                     </Button>
                 </Col>
             </Row>
