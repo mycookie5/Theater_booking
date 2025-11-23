@@ -22,6 +22,7 @@ export default function Booking() {
     const { userData } = authUser();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
+    const [seatCount, setSeatCount] = useState<number>(0);
     const [seats, setSeats] = useState<Seat[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -65,6 +66,22 @@ export default function Booking() {
 
     const handleSectionSelect = (sectionName: string) => {
         setSelectedSection(sectionName);
+        setSeatCount(0);
+    };
+
+    const getMaxSeats = (): number => {
+        if (!selectedSection) return 0;
+        const seat = seats.find(s => s.section === selectedSection);
+        return seat ? seat.available_seats : 0;
+    };
+
+    const incrementSeatCount = () => {
+        const max = getMaxSeats();
+        setSeatCount(prev => Math.min(max, prev + 1));
+    };
+
+    const decrementSeatCount = () => {
+        setSeatCount(prev => Math.max(0, prev - 1));
     };
 
     if (!userData) {
@@ -238,6 +255,36 @@ export default function Booking() {
                                         </Button>
                                     </div>
 
+                                    {selectedSection && (
+                                        <div className="text-center mt-4">
+                                            <p className="mb-2 text-muted">Number of seats to book:</p>
+                                            <div className="d-flex justify-content-center align-items-center gap-3">
+                                                <Button
+                                                    variant="outline-secondary"
+                                                    onClick={decrementSeatCount}
+                                                    disabled={seatCount === 0}
+                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                >
+                                                    -
+                                                </Button>
+                                                <span className="fs-4 fw-bold" style={{ minWidth: '60px', textAlign: 'center' }}>
+                                                    {seatCount}
+                                                </span>
+                                                <Button
+                                                    variant="outline-secondary"
+                                                    onClick={incrementSeatCount}
+                                                    disabled={seatCount >= getMaxSeats()}
+                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                >
+                                                    +
+                                                </Button>
+                                            </div>
+                                            <small className="text-muted mt-2 d-block">
+                                                {getMaxSeats()} seats available in {selectedSection}
+                                            </small>
+                                        </div>
+                                    )}
+
                                     <div className="mt-3 d-flex flex-wrap gap-3 justify-content-center">
                                         {Array.from(new Set(seats.map(s => s.section.charAt(0)))).sort().map(row => (
                                             <div key={row} className="d-flex align-items-center gap-2">
@@ -264,11 +311,11 @@ export default function Booking() {
                         variant="success"
                         size="lg"
                         className="w-100"
-                        disabled={!selectedSection}
+                        disabled={!selectedSection || seatCount === 0}
                     >
-                        {selectedSection
-                            ? `Proceed with Section ${selectedSection}`
-                            : 'Select a Section to Continue'}
+                        {selectedSection && seatCount > 0
+                            ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}`
+                            : 'Select Section and Seats'}
                     </Button>
                 </Col>
             </Row>
