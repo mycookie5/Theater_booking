@@ -11,6 +11,7 @@ Booking.route = {
 interface MatchInfo {
     event_id: number;
     seat_id: number;
+    unique_id: string;
     section: string;
     available_seats: number;
     date: string;
@@ -41,7 +42,11 @@ export default function Booking() {
         fetch('/api/match_info')
             .then(res => res.ok ? res.json() : [])
             .then((data: MatchInfo[]) => {
+                console.log('API Response:', data);
+                console.log('URL param id:', id);
                 const eventId = parseInt(id || '0', 10);
+                console.log('Parsed eventId:', eventId);
+                console.log('Data for this event:', data.filter(seat => seat.event_id === eventId));
                 const availableSeats = data
                     .filter(seat => seat.event_id === eventId && seat.available_seats > 0)
                     .sort((a, b) => {
@@ -52,6 +57,7 @@ export default function Booking() {
                         const bNum = parseInt(b.section.slice(1), 10);
                         return aNum - bNum;
                     });
+                console.log('Available seats after filtering:', availableSeats);
                 setMatchInfo(availableSeats);
                 setLoading(false);
             })
@@ -319,7 +325,7 @@ export default function Booking() {
                                         >
                                             {matchInfo.map((seat) => (
                                                 <Button
-                                                    key={seat.seat_id}
+                                                    key={seat.unique_id}
                                                     variant={selectedSection === seat.section ? 'primary' : 'outline-secondary'}
                                                     onClick={() => handleSectionSelect(seat.section)}
                                                     className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
