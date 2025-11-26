@@ -8,12 +8,14 @@ Booking.route = {
     menuLabel: 'Booking',
 };
 
-interface Seat {
-    id: number;
+interface MatchInfo {
     event_id: number;
-    total_seats: number;
+    seat_id: number;
     section: string;
     available_seats: number;
+    date: string;
+    Opponent: string;
+    price: number;
 }
 
 export default function Booking() {
@@ -23,16 +25,22 @@ export default function Booking() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [seatCount, setSeatCount] = useState<number>(0);
-    const [seats, setSeats] = useState<Seat[]>([]);
+    const [matchInfo, setMatchInfo] = useState<MatchInfo[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [booking, setBooking] = useState<boolean>(false);
     const [bookingSuccess, setBookingSuccess] = useState<boolean>(false);
     const [bookingError, setBookingError] = useState<string | null>(null);
 
+    // Get match details (date, opponent) from first item
+    const matchDetails = matchInfo.length > 0 ? {
+        date: matchInfo[0].date,
+        opponent: matchInfo[0].Opponent
+    } : null;
+
     useEffect(() => {
-        fetch('/api/seats')
+        fetch('/api/match_info')
             .then(res => res.ok ? res.json() : [])
-            .then((data: Seat[]) => {
+            .then((data: MatchInfo[]) => {
                 const eventId = parseInt(id || '0', 10);
                 const availableSeats = data
                     .filter(seat => seat.event_id === eventId && seat.available_seats > 0)
@@ -44,11 +52,11 @@ export default function Booking() {
                         const bNum = parseInt(b.section.slice(1), 10);
                         return aNum - bNum;
                     });
-                setSeats(availableSeats);
+                setMatchInfo(availableSeats);
                 setLoading(false);
             })
             .catch(err => {
-                console.error('Error fetching seats:', err);
+                console.error('Error fetching match info:', err);
                 setLoading(false);
             });
     }, [id]);
@@ -74,8 +82,18 @@ export default function Booking() {
 
     const getMaxSeats = (): number => {
         if (!selectedSection) return 0;
-        const seat = seats.find(s => s.section === selectedSection);
+        const seat = matchInfo.find(s => s.section === selectedSection);
         return seat ? seat.available_seats : 0;
+    };
+
+    const getSectionPrice = (): number => {
+        if (!selectedSection) return 0;
+        const seat = matchInfo.find(s => s.section === selectedSection);
+        return seat ? seat.price : 0;
+    };
+
+    const getTotalPrice = (): number => {
+        return getSectionPrice() * seatCount;
     };
 
     const incrementSeatCount = () => {
@@ -94,19 +112,18 @@ export default function Booking() {
         setBookingError(null);
 
         try {
-            const selectedSeat = seats.find(s => s.section === selectedSection);
+            const selectedSeat = matchInfo.find(s => s.section === selectedSection);
             if (!selectedSeat) return;
 
             const ticketData = {
                 event_id: parseInt(id),
                 user_id: userData.id,
-                seat_id: selectedSeat.id,
+                seat_id: selectedSeat.seat_id,
                 quantity: seatCount
             };
 
             console.log('Creating ticket with data:', ticketData);
 
-            // Create ticket
             const ticketResponse = await fetch('/api/tickets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -121,8 +138,7 @@ export default function Booking() {
 
             console.log('Ticket created successfully');
 
-            // Update available seats
-            await fetch(`/api/seats/${selectedSeat.id}`, {
+            await fetch(`/api/seats/${selectedSeat.seat_id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -156,7 +172,7 @@ export default function Booking() {
                                     size="lg"
                                     onClick={() => navigate('/login')}
                                 >
-                                    Go to Login
+                                    Log In
                                 </Button>
                             </Card.Body>
                         </Card>
@@ -167,12 +183,8 @@ export default function Booking() {
     }
 
     return (
-        <Container className="booking-page-container py-4">
-            <h1 className="mb-4">Book Your Seats</h1>
-            <p className="text-muted mb-4">Event ID: {id}</p>
-
-            {/* Success Modal */}
-            <Modal show={bookingSuccess} onHide={() => { setBookingSuccess(false); navigate('/events'); }} centered>
+        <Container className="py-5">
+            <Modal show={bookingSuccess} onHide={() => { setBookingSuccess(false); navigate('/mytickets'); }} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Booking Successful!</Modal.Title>
                 </Modal.Header>
@@ -180,13 +192,12 @@ export default function Booking() {
                     Your tickets have been booked successfully.
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="success" onClick={() => { setBookingSuccess(false); navigate('/events'); }}>
+                    <Button variant="success" onClick={() => { setBookingSuccess(false); navigate('/mytickets'); }}>
                         OK
                     </Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Error Modal */}
             <Modal show={!!bookingError} onHide={() => setBookingError(null)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Booking Failed</Modal.Title>
@@ -241,21 +252,36 @@ export default function Booking() {
             </Row>
 
             <Row className="mb-4">
-                <Col xs={12}>
+                <Col>
+                    {matchDetails && (
+                        <Card className="shadow-sm mb-4">
+                            <Card.Body>
+                                <h2 className="mb-3">Match Information</h2>
+                                <Row>
+                                    <Col md={6}>
+                                        <p className="mb-2">
+                                            <strong>Opponent:</strong> {matchDetails.opponent}
+                                        </p>
+                                    </Col>
+                                    <Col md={6}>
+                                        <p className="mb-2">
+                                            <strong>Date:</strong> {new Date(matchDetails.date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </p>
+                                    </Col>
+                                </Row>
+                            </Card.Body>
+                        </Card>
+                    )}
                     <Card className="shadow-sm">
-                        <Card.Header as="h5" className="bg-secondary text-white">
-                            Select Your Section
-                        </Card.Header>
                         <Card.Body>
-                            {selectedSection && (
-                                <div className="alert alert-success mb-3" role="alert">
-                                    <strong>Selected Section:</strong> {selectedSection}
-                                </div>
-                            )}
-
+                            <h3 className="mb-4">Select Your Seats</h3>
                             {loading ? (
                                 <p className="text-center text-muted">Loading available sections...</p>
-                            ) : seats.length === 0 ? (
+                            ) : matchInfo.length === 0 ? (
                                 <p className="text-center text-muted">No available sections for this event.</p>
                             ) : (
                                 <>
@@ -291,15 +317,15 @@ export default function Booking() {
                                                 msOverflowStyle: 'none'
                                             }}
                                         >
-                                            {seats.map((seat) => (
+                                            {matchInfo.map((seat) => (
                                                 <Button
-                                                    key={seat.id}
+                                                    key={seat.seat_id}
                                                     variant={selectedSection === seat.section ? 'primary' : 'outline-secondary'}
                                                     onClick={() => handleSectionSelect(seat.section)}
                                                     className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
                                                     style={{
                                                         minWidth: '100px',
-                                                        height: '70px',
+                                                        height: '90px',
                                                         borderRadius: '8px'
                                                     }}
                                                 >
@@ -313,8 +339,24 @@ export default function Booking() {
                                                         className={selectedSection === seat.section ? 'text-white-50' : 'text-muted'}
                                                         style={{ fontSize: '0.6rem', textAlign: 'center' }}
                                                     >
-                                                        {seat.available_seats} seats available
+                                                        {seat.available_seats} seats
                                                     </small>
+                                                    {seat.price > 0 && (
+                                                        <small
+                                                            className={selectedSection === seat.section ? 'text-white' : 'text-success'}
+                                                            style={{ fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                        >
+                                                            ${seat.price}
+                                                        </small>
+                                                    )}
+                                                    {seat.price === 0 && (
+                                                        <small
+                                                            className={selectedSection === seat.section ? 'text-white' : 'text-success'}
+                                                            style={{ fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                        >
+                                                            FREE
+                                                        </small>
+                                                    )}
                                                 </Button>
                                             ))}
                                         </div>
@@ -368,18 +410,35 @@ export default function Booking() {
                                             <small className="text-muted mt-2 d-block">
                                                 {getMaxSeats()} seats available in {selectedSection}
                                             </small>
+                                            {getSectionPrice() > 0 && seatCount > 0 && (
+                                                <div className="mt-3">
+                                                    <h5 className="text-success">
+                                                        Total: ${getTotalPrice()}
+                                                    </h5>
+                                                    <small className="text-muted">
+                                                        ${getSectionPrice()} per seat
+                                                    </small>
+                                                </div>
+                                            )}
+                                            {getSectionPrice() === 0 && seatCount > 0 && (
+                                                <div className="mt-3">
+                                                    <h5 className="text-success">
+                                                        FREE
+                                                    </h5>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
                                     <div className="mt-3 d-flex flex-wrap gap-3 justify-content-center">
-                                        {Array.from(new Set(seats.map(s => s.section.charAt(0)))).sort().map(row => (
+                                        {Array.from(new Set(matchInfo.map(s => s.section.charAt(0)))).sort().map(row => (
                                             <div key={row} className="d-flex align-items-center gap-2">
                                                 <span
                                                     className={`badge ${row === 'A' ? 'bg-info' : 'bg-warning'}`}
                                                     style={{ width: '20px', height: '20px' }}
                                                 ></span>
                                                 <small className="text-muted">
-                                                    Row {row} ({seats.filter(s => s.section.charAt(0) === row).length} sections)
+                                                    Row {row} ({matchInfo.filter(s => s.section.charAt(0) === row).length} sections)
                                                 </small>
                                             </div>
                                         ))}
@@ -403,7 +462,7 @@ export default function Booking() {
                         {booking
                             ? 'Booking...'
                             : selectedSection && seatCount > 0
-                                ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}`
+                                ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}${getTotalPrice() > 0 ? ` - $${getTotalPrice()}` : ' - FREE'}`
                                 : 'Select Section and Seats'}
                     </Button>
                 </Col>
