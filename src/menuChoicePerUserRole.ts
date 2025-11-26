@@ -6,6 +6,6 @@ export default {
         'Home', 'My Tickets', 'About', 'Logout'
     ],
     admin: [
-        'Home', 'Admin', 'About', 'Logout'
+        'Home', 'Admin', 'My Tickets', 'About', 'Logout'
     ]
 };
