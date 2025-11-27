@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Alert, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import authUser from '../hooks/authUser';
 
@@ -8,12 +8,15 @@ Booking.route = {
     menuLabel: 'Booking',
 };
 
-interface Seat {
-    id: number;
+interface MatchInfo {
     event_id: number;
-    total_seats: number;
+    seat_id: number;
+    unique_id: string;
     section: string;
     available_seats: number;
+    date: string;
+    Opponent: string;
+    price: number;
 }
 
 export default function Booking() {
@@ -23,17 +26,27 @@ export default function Booking() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [seatCount, setSeatCount] = useState<number>(0);
-    const [seats, setSeats] = useState<Seat[]>([]);
+    const [matchInfo, setMatchInfo] = useState<MatchInfo[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [booking, setBooking] = useState<boolean>(false);
     const [bookingSuccess, setBookingSuccess] = useState<boolean>(false);
     const [bookingError, setBookingError] = useState<string | null>(null);
 
+    // Get match details (date, opponent) from first item
+    const matchDetails = matchInfo.length > 0 ? {
+        date: matchInfo[0].date,
+        opponent: matchInfo[0].Opponent
+    } : null;
+
     useEffect(() => {
-        fetch('/api/seats')
+        fetch('/api/match_info')
             .then(res => res.ok ? res.json() : [])
-            .then((data: Seat[]) => {
+            .then((data: MatchInfo[]) => {
+                console.log('API Response:', data);
+                console.log('URL param id:', id);
                 const eventId = parseInt(id || '0', 10);
+                console.log('Parsed eventId:', eventId);
+                console.log('Data for this event:', data.filter(seat => seat.event_id === eventId));
                 const availableSeats = data
                     .filter(seat => seat.event_id === eventId && seat.available_seats > 0)
                     .sort((a, b) => {
@@ -44,11 +57,12 @@ export default function Booking() {
                         const bNum = parseInt(b.section.slice(1), 10);
                         return aNum - bNum;
                     });
-                setSeats(availableSeats);
+                console.log('Available seats after filtering:', availableSeats);
+                setMatchInfo(availableSeats);
                 setLoading(false);
             })
             .catch(err => {
-                console.error('Error fetching seats:', err);
+                console.error('Error fetching match info:', err);
                 setLoading(false);
             });
     }, [id]);
@@ -74,8 +88,18 @@ export default function Booking() {
 
     const getMaxSeats = (): number => {
         if (!selectedSection) return 0;
-        const seat = seats.find(s => s.section === selectedSection);
+        const seat = matchInfo.find(s => s.section === selectedSection);
         return seat ? seat.available_seats : 0;
+    };
+
+    const getSectionPrice = (): number => {
+        if (!selectedSection) return 0;
+        const seat = matchInfo.find(s => s.section === selectedSection);
+        return seat ? seat.price : 0;
+    };
+
+    const getTotalPrice = (): number => {
+        return getSectionPrice() * seatCount;
     };
 
     const incrementSeatCount = () => {
@@ -94,19 +118,18 @@ export default function Booking() {
         setBookingError(null);
 
         try {
-            const selectedSeat = seats.find(s => s.section === selectedSection);
+            const selectedSeat = matchInfo.find(s => s.section === selectedSection);
             if (!selectedSeat) return;
 
             const ticketData = {
                 event_id: parseInt(id),
                 user_id: userData.id,
-                seat_id: selectedSeat.id,
+                seat_id: selectedSeat.seat_id,
                 quantity: seatCount
             };
 
             console.log('Creating ticket with data:', ticketData);
 
-            // Create ticket
             const ticketResponse = await fetch('/api/tickets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -121,8 +144,7 @@ export default function Booking() {
 
             console.log('Ticket created successfully');
 
-            // Update available seats
-            await fetch(`/api/seats/${selectedSeat.id}`, {
+            await fetch(`/api/seats/${selectedSeat.seat_id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -156,7 +178,7 @@ export default function Booking() {
                                     size="lg"
                                     onClick={() => navigate('/login')}
                                 >
-                                    Go to Login
+                                    Log In
                                 </Button>
                             </Card.Body>
                         </Card>
@@ -167,12 +189,8 @@ export default function Booking() {
     }
 
     return (
-        <Container className="booking-page-container py-4">
-            <h1 className="mb-4">Book Your Seats</h1>
-            <p className="text-muted mb-4">Event ID: {id}</p>
-
-            {/* Success Modal */}
-            <Modal show={bookingSuccess} onHide={() => { setBookingSuccess(false); navigate('/events'); }} centered>
+        <Container className="py-5">
+            <Modal show={bookingSuccess} onHide={() => { setBookingSuccess(false); navigate('/mytickets'); }} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Booking Successful!</Modal.Title>
                 </Modal.Header>
@@ -180,13 +198,12 @@ export default function Booking() {
                     Your tickets have been booked successfully.
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="success" onClick={() => { setBookingSuccess(false); navigate('/events'); }}>
+                    <Button variant="success" onClick={() => { setBookingSuccess(false); navigate('/mytickets'); }}>
                         OK
                     </Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Error Modal */}
             <Modal show={!!bookingError} onHide={() => setBookingError(null)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Booking Failed</Modal.Title>
@@ -211,17 +228,12 @@ export default function Booking() {
                             <img
                                 src="/images/stadium-map.png"
                                 alt="Stadium Seating Map"
-                                className="img-fluid"
-                                style={{
-                                    maxHeight: '400px',
-                                    objectFit: 'contain',
-                                    width: '100%'
-                                }}
+                                className="img-fluid w-100 stadium-map-img"
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.style.display = 'none';
                                     target.parentElement!.innerHTML = `
-                                        <div class="bg-light d-flex align-items-center justify-content-center" 
+                                        <div class="bg-light d-flex align-items-center justify-content-center stadium-placeholder" 
                                              style="height: 300px; border: 2px dashed #ccc; border-radius: 8px;">
                                             <div class="text-center text-muted">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
@@ -241,21 +253,36 @@ export default function Booking() {
             </Row>
 
             <Row className="mb-4">
-                <Col xs={12}>
+                <Col>
+                    {matchDetails && (
+                        <Card className="shadow-sm mb-4">
+                            <Card.Body>
+                                <h2 className="mb-3">Match Information</h2>
+                                <Row>
+                                    <Col md={6}>
+                                        <p className="mb-2">
+                                            <strong>Opponent:</strong> {matchDetails.opponent}
+                                        </p>
+                                    </Col>
+                                    <Col md={6}>
+                                        <p className="mb-2">
+                                            <strong>Date:</strong> {new Date(matchDetails.date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </p>
+                                    </Col>
+                                </Row>
+                            </Card.Body>
+                        </Card>
+                    )}
                     <Card className="shadow-sm">
-                        <Card.Header as="h5" className="bg-secondary text-white">
-                            Select Your Section
-                        </Card.Header>
                         <Card.Body>
-                            {selectedSection && (
-                                <div className="alert alert-success mb-3" role="alert">
-                                    <strong>Selected Section:</strong> {selectedSection}
-                                </div>
-                            )}
-
+                            <h3 className="mb-4">Select Your Seats</h3>
                             {loading ? (
                                 <p className="text-center text-muted">Loading available sections...</p>
-                            ) : seats.length === 0 ? (
+                            ) : matchInfo.length === 0 ? (
                                 <p className="text-center text-muted">No available sections for this event.</p>
                             ) : (
                                 <>
@@ -263,8 +290,7 @@ export default function Booking() {
                                         <Button
                                             variant="outline-primary"
                                             onClick={() => scroll('left')}
-                                            className="flex-shrink-0 d-flex align-items-center justify-content-center"
-                                            style={{ width: '48px', height: '48px' }}
+                                            className="flex-shrink-0 d-flex align-items-center justify-content-center scroll-btn"
                                             aria-label="Scroll left"
                                         >
                                             <svg
@@ -283,38 +309,37 @@ export default function Booking() {
 
                                         <div
                                             ref={scrollContainerRef}
-                                            className="d-flex gap-2 overflow-hidden flex-grow-1"
-                                            style={{
-                                                scrollBehavior: 'smooth',
-                                                overflowX: 'auto',
-                                                scrollbarWidth: 'none',
-                                                msOverflowStyle: 'none'
-                                            }}
+                                            className="d-flex gap-2 overflow-hidden flex-grow-1 scroll-container"
                                         >
-                                            {seats.map((seat) => (
+                                            {matchInfo.map((seat) => (
                                                 <Button
-                                                    key={seat.id}
+                                                    key={seat.unique_id}
                                                     variant={selectedSection === seat.section ? 'primary' : 'outline-secondary'}
                                                     onClick={() => handleSectionSelect(seat.section)}
-                                                    className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
-                                                    style={{
-                                                        minWidth: '100px',
-                                                        height: '70px',
-                                                        borderRadius: '8px'
-                                                    }}
+                                                    className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center seat-btn rounded-2"
                                                 >
-                                                    <span
-                                                        className="fw-bold"
-                                                        style={{ fontSize: '1.1rem' }}
-                                                    >
+                                                    <span className="fw-bold fs-5">
                                                         {seat.section}
                                                     </span>
                                                     <small
-                                                        className={selectedSection === seat.section ? 'text-white-50' : 'text-muted'}
-                                                        style={{ fontSize: '0.6rem', textAlign: 'center' }}
+                                                        className={`${selectedSection === seat.section ? 'text-white-50' : 'text-muted'} seat-info`}
                                                     >
-                                                        {seat.available_seats} seats available
+                                                        {seat.available_seats} seats
                                                     </small>
+                                                    {seat.price > 0 && (
+                                                        <small
+                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
+                                                        >
+                                                            ${seat.price}
+                                                        </small>
+                                                    )}
+                                                    {seat.price === 0 && (
+                                                        <small
+                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
+                                                        >
+                                                            FREE
+                                                        </small>
+                                                    )}
                                                 </Button>
                                             ))}
                                         </div>
@@ -322,8 +347,7 @@ export default function Booking() {
                                         <Button
                                             variant="outline-primary"
                                             onClick={() => scroll('right')}
-                                            className="flex-shrink-0 d-flex align-items-center justify-content-center"
-                                            style={{ width: '48px', height: '48px' }}
+                                            className="flex-shrink-0 d-flex align-items-center justify-content-center scroll-btn"
                                             aria-label="Scroll right"
                                         >
                                             <svg
@@ -349,18 +373,18 @@ export default function Booking() {
                                                     variant="outline-secondary"
                                                     onClick={decrementSeatCount}
                                                     disabled={seatCount === 0}
-                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                    className="seat-counter-btn fs-3"
                                                 >
                                                     -
                                                 </Button>
-                                                <span className="fs-4 fw-bold" style={{ minWidth: '60px', textAlign: 'center' }}>
+                                                <span className="fs-4 fw-bold seat-count-display text-center">
                                                     {seatCount}
                                                 </span>
                                                 <Button
                                                     variant="outline-secondary"
                                                     onClick={incrementSeatCount}
                                                     disabled={seatCount >= getMaxSeats()}
-                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                    className="seat-counter-btn fs-3"
                                                 >
                                                     +
                                                 </Button>
@@ -368,18 +392,34 @@ export default function Booking() {
                                             <small className="text-muted mt-2 d-block">
                                                 {getMaxSeats()} seats available in {selectedSection}
                                             </small>
+                                            {getSectionPrice() > 0 && seatCount > 0 && (
+                                                <div className="mt-3">
+                                                    <h5 className="text-success">
+                                                        Total: ${getTotalPrice()}
+                                                    </h5>
+                                                    <small className="text-muted">
+                                                        ${getSectionPrice()} per seat
+                                                    </small>
+                                                </div>
+                                            )}
+                                            {getSectionPrice() === 0 && seatCount > 0 && (
+                                                <div className="mt-3">
+                                                    <h5 className="text-success">
+                                                        FREE
+                                                    </h5>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
                                     <div className="mt-3 d-flex flex-wrap gap-3 justify-content-center">
-                                        {Array.from(new Set(seats.map(s => s.section.charAt(0)))).sort().map(row => (
+                                        {Array.from(new Set(matchInfo.map(s => s.section.charAt(0)))).sort().map(row => (
                                             <div key={row} className="d-flex align-items-center gap-2">
                                                 <span
-                                                    className={`badge ${row === 'A' ? 'bg-info' : 'bg-warning'}`}
-                                                    style={{ width: '20px', height: '20px' }}
+                                                    className={`badge ${row === 'A' ? 'bg-info' : 'bg-warning'} row-badge`}
                                                 ></span>
                                                 <small className="text-muted">
-                                                    Row {row} ({seats.filter(s => s.section.charAt(0) === row).length} sections)
+                                                    Row {row} ({matchInfo.filter(s => s.section.charAt(0) === row).length} sections)
                                                 </small>
                                             </div>
                                         ))}
@@ -403,7 +443,7 @@ export default function Booking() {
                         {booking
                             ? 'Booking...'
                             : selectedSection && seatCount > 0
-                                ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}`
+                                ? `Book ${seatCount} seat${seatCount > 1 ? 's' : ''} in ${selectedSection}${getTotalPrice() > 0 ? ` - $${getTotalPrice()}` : ' - FREE'}`
                                 : 'Select Section and Seats'}
                     </Button>
                 </Col>

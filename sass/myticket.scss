@@ -1,0 +1,63 @@
+/* Custom styles for MyTickets component */
+
+.ticket-card {
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
+}
+
+.ticket-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ticket-label {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.ticket-logo {
+    opacity: 0.9;
+}
+
+.ticket-perforation {
+    height: 12px;
+}
+
+.ticket-perforation-circles {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    height: 12px;
+    background: radial-gradient(circle at 6px 6px, transparent 6px, white 6px);
+    background-size: 24px 12px;
+    background-repeat: repeat-x;
+}
+
+.ticket-opponent {
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.ticket-info-row {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.ticket-info-label {
+    font-size: 0.75rem;
+}
+
+.ticket-info-value {
+    font-size: 0.9rem;
+}
+
+.ticket-badge {
+    font-size: 0.85rem;
+}
+
+.ticket-number-section {
+    border-top: 1px dashed #dee2e6;
+}
+
+.ticket-number {
+    font-size: 0.7rem;
+}
