@@ -228,17 +228,12 @@ export default function Booking() {
                             <img
                                 src="/images/stadium-map.png"
                                 alt="Stadium Seating Map"
-                                className="img-fluid"
-                                style={{
-                                    maxHeight: '400px',
-                                    objectFit: 'contain',
-                                    width: '100%'
-                                }}
+                                className="img-fluid w-100 stadium-map-img"
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.style.display = 'none';
                                     target.parentElement!.innerHTML = `
-                                        <div class="bg-light d-flex align-items-center justify-content-center" 
+                                        <div class="bg-light d-flex align-items-center justify-content-center stadium-placeholder" 
                                              style="height: 300px; border: 2px dashed #ccc; border-radius: 8px;">
                                             <div class="text-center text-muted">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
@@ -295,8 +290,7 @@ export default function Booking() {
                                         <Button
                                             variant="outline-primary"
                                             onClick={() => scroll('left')}
-                                            className="flex-shrink-0 d-flex align-items-center justify-content-center"
-                                            style={{ width: '48px', height: '48px' }}
+                                            className="flex-shrink-0 d-flex align-items-center justify-content-center scroll-btn"
                                             aria-label="Scroll left"
                                         >
                                             <svg
@@ -315,50 +309,33 @@ export default function Booking() {
 
                                         <div
                                             ref={scrollContainerRef}
-                                            className="d-flex gap-2 overflow-hidden flex-grow-1"
-                                            style={{
-                                                scrollBehavior: 'smooth',
-                                                overflowX: 'auto',
-                                                scrollbarWidth: 'none',
-                                                msOverflowStyle: 'none'
-                                            }}
+                                            className="d-flex gap-2 overflow-hidden flex-grow-1 scroll-container"
                                         >
                                             {matchInfo.map((seat) => (
                                                 <Button
                                                     key={seat.unique_id}
                                                     variant={selectedSection === seat.section ? 'primary' : 'outline-secondary'}
                                                     onClick={() => handleSectionSelect(seat.section)}
-                                                    className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center"
-                                                    style={{
-                                                        minWidth: '100px',
-                                                        height: '90px',
-                                                        borderRadius: '8px'
-                                                    }}
+                                                    className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center seat-btn rounded-2"
                                                 >
-                                                    <span
-                                                        className="fw-bold"
-                                                        style={{ fontSize: '1.1rem' }}
-                                                    >
+                                                    <span className="fw-bold fs-5">
                                                         {seat.section}
                                                     </span>
                                                     <small
-                                                        className={selectedSection === seat.section ? 'text-white-50' : 'text-muted'}
-                                                        style={{ fontSize: '0.6rem', textAlign: 'center' }}
+                                                        className={`${selectedSection === seat.section ? 'text-white-50' : 'text-muted'} seat-info`}
                                                     >
                                                         {seat.available_seats} seats
                                                     </small>
                                                     {seat.price > 0 && (
                                                         <small
-                                                            className={selectedSection === seat.section ? 'text-white' : 'text-success'}
-                                                            style={{ fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
                                                         >
                                                             ${seat.price}
                                                         </small>
                                                     )}
                                                     {seat.price === 0 && (
                                                         <small
-                                                            className={selectedSection === seat.section ? 'text-white' : 'text-success'}
-                                                            style={{ fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
                                                         >
                                                             FREE
                                                         </small>
@@ -370,8 +347,7 @@ export default function Booking() {
                                         <Button
                                             variant="outline-primary"
                                             onClick={() => scroll('right')}
-                                            className="flex-shrink-0 d-flex align-items-center justify-content-center"
-                                            style={{ width: '48px', height: '48px' }}
+                                            className="flex-shrink-0 d-flex align-items-center justify-content-center scroll-btn"
                                             aria-label="Scroll right"
                                         >
                                             <svg
@@ -397,18 +373,18 @@ export default function Booking() {
                                                     variant="outline-secondary"
                                                     onClick={decrementSeatCount}
                                                     disabled={seatCount === 0}
-                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                    className="seat-counter-btn fs-3"
                                                 >
                                                     -
                                                 </Button>
-                                                <span className="fs-4 fw-bold" style={{ minWidth: '60px', textAlign: 'center' }}>
+                                                <span className="fs-4 fw-bold seat-count-display text-center">
                                                     {seatCount}
                                                 </span>
                                                 <Button
                                                     variant="outline-secondary"
                                                     onClick={incrementSeatCount}
                                                     disabled={seatCount >= getMaxSeats()}
-                                                    style={{ width: '48px', height: '48px', fontSize: '1.5rem' }}
+                                                    className="seat-counter-btn fs-3"
                                                 >
                                                     +
                                                 </Button>
@@ -440,8 +416,7 @@ export default function Booking() {
                                         {Array.from(new Set(matchInfo.map(s => s.section.charAt(0)))).sort().map(row => (
                                             <div key={row} className="d-flex align-items-center gap-2">
                                                 <span
-                                                    className={`badge ${row === 'A' ? 'bg-info' : 'bg-warning'}`}
-                                                    style={{ width: '20px', height: '20px' }}
+                                                    className={`badge ${row === 'A' ? 'bg-info' : 'bg-warning'} row-badge`}
                                                 ></span>
                                                 <small className="text-muted">
                                                     Row {row} ({matchInfo.filter(s => s.section.charAt(0) === row).length} sections)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Modal } from 'react-bootstrap';
 import authUser from '../hooks/authUser';
+import '../../sass/myticket.scss'; // Import custom CSS for styles that can't be replicated with Bootstrap
 
 MyTickets.route = {
     path: '/mytickets',
@@ -176,29 +177,14 @@ export default function MyTickets() {
                     <Row xs={1} md={2} lg={3} className="g-4">
                         {tickets.map(ticket => (
                             <Col key={ticket.id}>
-                                <div
-                                    className="shadow-sm"
-                                    style={{
-                                        background: 'white',
-                                        borderRadius: '12px',
-                                        overflow: 'hidden',
-                                        border: '2px dashed #dee2e6',
-                                        position: 'relative'
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                            padding: '20px',
-                                            position: 'relative'
-                                        }}
-                                    >
+                                <div className="ticket-card bg-white shadow-sm overflow-hidden position-relative">
+                                    <div className="ticket-header p-4 position-relative">
                                         <div className="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <h6 className="text-white mb-1" style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+                                                <h6 className="text-white mb-1 ticket-label fw-bold text-uppercase">
                                                     MATCH TICKET
                                                 </h6>
-                                                <h5 className="text-white mb-0" style={{ fontWeight: 'bold' }}>
+                                                <h5 className="text-white mb-0 fw-bold">
                                                     THUNDERBOLTS FC
                                                 </h5>
                                             </div>
@@ -208,7 +194,7 @@ export default function MyTickets() {
                                                 viewBox="0 0 100 100"
                                                 fill="none"
                                                 xmlns="http://www.w3.org/2000/svg"
-                                                style={{ opacity: 0.9 }}
+                                                className="ticket-logo"
                                             >
                                                 <circle cx="50" cy="50" r="48" fill="white" stroke="#333" strokeWidth="2" />
                                                 <path d="M50 10 L58 32 L78 32 L62 46 L68 66 L50 54 L32 66 L38 46 L22 32 L42 32 Z" fill="#333" />
@@ -217,44 +203,29 @@ export default function MyTickets() {
                                         </div>
                                     </div>
 
-                                    <div
-                                        style={{
-                                            height: '12px',
-                                            background: 'white',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-6px',
-                                            left: '-6px',
-                                            right: '-6px',
-                                            height: '12px',
-                                            background: `radial-gradient(circle at 6px 6px, transparent 6px, white 6px)`,
-                                            backgroundSize: '24px 12px',
-                                            backgroundRepeat: 'repeat-x'
-                                        }}></div>
+                                    <div className="ticket-perforation bg-white position-relative">
+                                        <div className="ticket-perforation-circles"></div>
                                     </div>
 
-                                    <div style={{ padding: '20px' }}>
+                                    <div className="p-4">
                                         <div className="mb-3">
-                                            <h4 className="mb-1" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#333' }}>
+                                            <h4 className="mb-1 ticket-opponent fw-bold text-dark">
                                                 vs {ticket.opponent}
                                             </h4>
                                         </div>
 
                                         <div className="mb-3">
-                                            <div className="d-flex justify-content-between align-items-center mb-2 pb-2" style={{ borderBottom: '1px solid #e9ecef' }}>
-                                                <span className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>Date</span>
-                                                <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{formatDate(ticket.date)}</span>
+                                            <div className="d-flex justify-content-between align-items-center mb-2 pb-2 ticket-info-row">
+                                                <span className="text-muted ticket-info-label text-uppercase">Date</span>
+                                                <span className="fw-semibold ticket-info-value">{formatDate(ticket.date)}</span>
                                             </div>
-                                            <div className="d-flex justify-content-between align-items-center mb-2 pb-2" style={{ borderBottom: '1px solid #e9ecef' }}>
-                                                <span className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>Section</span>
-                                                <Badge bg="primary" style={{ fontSize: '0.85rem' }}>{ticket.section}</Badge>
+                                            <div className="d-flex justify-content-between align-items-center mb-2 pb-2 ticket-info-row">
+                                                <span className="text-muted ticket-info-label text-uppercase">Section</span>
+                                                <Badge bg="primary" className="ticket-badge">{ticket.section}</Badge>
                                             </div>
                                             <div className="d-flex justify-content-between align-items-center">
-                                                <span className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>Quantity</span>
-                                                <Badge bg="success" style={{ fontSize: '0.85rem' }}>{ticket.quantity} {ticket.quantity === 1 ? 'Ticket' : 'Tickets'}</Badge>
+                                                <span className="text-muted ticket-info-label text-uppercase">Quantity</span>
+                                                <Badge bg="success" className="ticket-badge">{ticket.quantity} {ticket.quantity === 1 ? 'Ticket' : 'Tickets'}</Badge>
                                             </div>
                                         </div>
 
@@ -269,8 +240,8 @@ export default function MyTickets() {
                                             </Button>
                                         </div>
 
-                                        <div className="text-center mt-3 pt-3" style={{ borderTop: '1px dashed #dee2e6' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                                        <div className="text-center mt-3 pt-3 ticket-number-section">
+                                            <small className="text-muted ticket-number">
                                                 TICKET #{ticket.id.toString().padStart(6, '0')}
                                             </small>
                                         </div>
