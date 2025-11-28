@@ -202,10 +202,10 @@ export default function Admin() {
                 }
 
                 seatIds[section] = seatId;
-                console.log(`Seat created for section ${section} with ID:`, seatId);
+                console.log(`Created seat for section ${section} with ID:`, seatId);
             }
 
-            // Step 3: Create prices for all seats
+            // Step 3: Create prices for all sections
             console.log('Creating prices...');
             for (const section of sections) {
                 const seatId = seatIds[section];
@@ -225,10 +225,9 @@ export default function Admin() {
                     throw new Error(`Failed to create price for section ${section}`);
                 }
 
-                console.log(`Price created for section ${section}: $${price}`);
+                console.log(`Created price for section ${section}`);
             }
 
-            // Success!
             setSuccess(true);
             console.log('Event creation completed successfully!');
 
@@ -260,26 +259,52 @@ export default function Admin() {
             if (seatsResponse.ok && pricesResponse.ok) {
                 const seatsData = await seatsResponse.json();
                 const pricesData = await pricesResponse.json();
-                setEditSeats(seatsData);
-                setEditPrices(pricesData);
+
+                // CRITICAL FIX: Filter seats and prices to ensure they belong to THIS event
+                const filteredSeats = seatsData.filter((s: Seat) => s.event_id === event.id);
+                const filteredPrices = pricesData.filter((p: Price) => p.event_id === event.id);
+
+                console.log(`Loaded ${filteredSeats.length} seats and ${filteredPrices.length} prices for event ${event.id}`);
+
+                setEditSeats(filteredSeats);
+                setEditPrices(filteredPrices);
             }
         } catch (err) {
             console.error('Error fetching event details:', err);
+            setEditError('Failed to load event details. Please try again.');
         }
 
         setShowEditModal(true);
     };
 
     const handleSectionChange = (section: string) => {
+        if (!editingEvent) {
+            console.error('No event is being edited');
+            return;
+        }
+
         setSelectedSection(section);
-        // Find the seat for this section
-        const seat = editSeats.find(s => s.section === section);
+
+        // CRITICAL FIX: Find the seat for this section AND verify it belongs to the current event
+        const seat = editSeats.find(s => s.section === section && s.event_id === editingEvent.id);
+
         if (seat) {
-            // Find the price for this seat
-            const price = editPrices.find(p => p.seat_id === seat.id);
+            // CRITICAL FIX: Find the price for this seat AND verify it belongs to the current event
+            const price = editPrices.find(p =>
+                p.seat_id === seat.id &&
+                p.event_id === editingEvent.id
+            );
+
             if (price) {
+                console.log(`Found price for section ${section} (Seat ID: ${seat.id}, Event ID: ${editingEvent.id}): $${price.price}`);
                 setSectionPrice(price.price.toString());
+            } else {
+                console.warn(`No price found for section ${section} in event ${editingEvent.id}`);
+                setSectionPrice('');
             }
+        } else {
+            console.warn(`No seat found for section ${section} in event ${editingEvent.id}`);
+            setSectionPrice('');
         }
     };
 
@@ -308,37 +333,59 @@ export default function Admin() {
 
             // Update price if a section is selected and price is changed
             if (selectedSection && sectionPrice) {
-                const seat = editSeats.find(s => s.section === selectedSection);
+                // CRITICAL FIX: Find the seat AND verify it belongs to the current event
+                const seat = editSeats.find(s =>
+                    s.section === selectedSection &&
+                    s.event_id === editingEvent.id
+                );
+
                 if (seat) {
-                    const price = editPrices.find(p => p.seat_id === seat.id);
+                    // CRITICAL FIX: Find the price AND verify it belongs to the current event
+                    const price = editPrices.find(p =>
+                        p.seat_id === seat.id &&
+                        p.event_id === editingEvent.id
+                    );
+
                     if (price) {
+                        console.log(`Updating price for section ${selectedSection} (Event ID: ${editingEvent.id}, Seat ID: ${seat.id}, Price ID: ${price.id})`);
+
                         const priceResponse = await fetch(`/api/price/${price.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                price: parseFloat(sectionPrice)
+                                price: parseFloat(sectionPrice),
+                                // Include these for additional validation on the backend
+                                event_id: editingEvent.id,
+                                seat_id: seat.id
                             })
                         });
 
                         if (!priceResponse.ok) {
                             throw new Error('Failed to update price');
                         }
+
+                        console.log('Price updated successfully');
+                    } else {
+                        throw new Error(`Price not found for section ${selectedSection} in event ${editingEvent.id}`);
                     }
+                } else {
+                    throw new Error(`Seat not found for section ${selectedSection} in event ${editingEvent.id}`);
                 }
             }
 
             setEditSuccess(true);
-            // Refresh events list
-            fetchEvents();
 
-            // Close modal after a short delay
+            // Refresh the events list
+            await fetchEvents();
+
+            // Close modal after a delay
             setTimeout(() => {
                 setShowEditModal(false);
             }, 1500);
 
         } catch (err) {
             console.error('Error updating event:', err);
-            setEditError(err instanceof Error ? err.message : 'Failed to update event');
+            setEditError(err instanceof Error ? err.message : 'An error occurred while updating the event');
         } finally {
             setLoadingEdit(false);
         }
@@ -358,7 +405,6 @@ export default function Admin() {
         setDeleteError(null);
 
         try {
-            // Delete event (cascade should handle seats and prices)
             const response = await fetch(`/api/events/${deletingEvent.id}`, {
                 method: 'DELETE'
             });
@@ -367,13 +413,14 @@ export default function Admin() {
                 throw new Error('Failed to delete event');
             }
 
-            // Refresh events list
-            fetchEvents();
+            // Refresh the events list
+            await fetchEvents();
             setShowDeleteModal(false);
+            setDeletingEvent(null);
 
         } catch (err) {
             console.error('Error deleting event:', err);
-            setDeleteError(err instanceof Error ? err.message : 'Failed to delete event');
+            setDeleteError(err instanceof Error ? err.message : 'An error occurred while deleting the event');
         } finally {
             setLoadingDelete(false);
         }
@@ -381,7 +428,7 @@ export default function Admin() {
 
     if (!isUserAdmin) {
         return (
-            <Container className="py-5">
+            <Container className="mt-5">
                 <Alert variant="danger">
                     <Alert.Heading>Access Denied</Alert.Heading>
                     <p>You do not have permission to access this page.</p>
@@ -391,152 +438,87 @@ export default function Admin() {
     }
 
     return (
-        <Container className="py-4">
-            <h2 className="mb-4">Event Management</h2>
+        <Container className="mt-4">
+            <h1 className="mb-4">Event Management</h1>
 
             <Tabs
                 activeKey={activeTab}
                 onSelect={(k) => setActiveTab(k || 'create')}
-                className="mb-4"
+                className="mb-3"
             >
-                {/* CREATE EVENT TAB */}
-                <Tab eventKey="create" title="Create Event">
-                    <Row className="justify-content-center">
-                        <Col xs={12} lg={10} xl={8}>
-                            <Card className="shadow">
-                                <Card.Header className="bg-primary text-white">
-                                    <h3 className="mb-0">Create New Event</h3>
-                                </Card.Header>
-                                <Card.Body className="p-4">
-                                    {error && (
-                                        <Alert variant="danger" dismissible onClose={() => setError(null)}>
-                                            {error}
-                                        </Alert>
-                                    )}
+                <Tab eventKey="create" title="Create New Event">
+                    <Card>
+                        <Card.Body>
+                            {error && (
+                                <Alert variant="danger" dismissible onClose={() => setError(null)}>
+                                    {error}
+                                </Alert>
+                            )}
 
-                                    {success && (
-                                        <Alert variant="success">
-                                            <Alert.Heading>Success!</Alert.Heading>
-                                            <p>Event created successfully with ID: {createdEventId}</p>
-                                            <ul className="mb-0">
-                                                <li>44 sections created (A1-A20, B1-B24)</li>
-                                                <li>Total capacity: 68,000 seats</li>
-                                                <li>All seats available for booking</li>
-                                            </ul>
-                                        </Alert>
-                                    )}
+                            {success && (
+                                <Alert variant="success" dismissible onClose={() => setSuccess(false)}>
+                                    <Alert.Heading>Success!</Alert.Heading>
+                                    <p>
+                                        Event created successfully with all seats and pricing!
+                                        {createdEventId && <><br /><strong>Event ID:</strong> {createdEventId}</>}
+                                    </p>
+                                    <hr />
+                                    <div className="d-flex justify-content-end">
+                                        <Button onClick={resetForm} variant="outline-success">
+                                            Create Another Event
+                                        </Button>
+                                    </div>
+                                </Alert>
+                            )}
 
-                                    <Form onSubmit={handleSubmit}>
-                                        <Row>
-                                            <Col xs={12} md={6} className="mb-3">
-                                                <Form.Group>
-                                                    <Form.Label>Opponent Team *</Form.Label>
-                                                    <Form.Control
-                                                        type="text"
-                                                        placeholder="Enter opponent name"
-                                                        value={opponent}
-                                                        onChange={(e) => setOpponent(e.target.value)}
-                                                        disabled={loading}
-                                                        required
-                                                    />
-                                                </Form.Group>
-                                            </Col>
-                                            <Col xs={12} md={6} className="mb-3">
-                                                <Form.Group>
-                                                    <Form.Label>Match Date *</Form.Label>
-                                                    <Form.Control
-                                                        type="date"
-                                                        value={eventDate}
-                                                        onChange={(e) => setEventDate(e.target.value)}
-                                                        disabled={loading}
-                                                        required
-                                                    />
-                                                </Form.Group>
-                                            </Col>
-                                        </Row>
-
-                                        <Row className="mb-3">
-                                            <Col xs={12} md={6}>
-                                                <Form.Group>
-                                                    <Form.Label>Home/Away</Form.Label>
-                                                    <Form.Control
-                                                        type="text"
-                                                        value="Home"
-                                                        disabled
-                                                        readOnly
-                                                    />
-                                                    <Form.Text className="text-muted">
-                                                        Always set to Home (default)
-                                                    </Form.Text>
-                                                </Form.Group>
-                                            </Col>
-                                        </Row>
-
-                                        <Card className="bg-light mb-4">
-                                            <Card.Body>
-                                                <h5 className="mb-3">Default Configuration</h5>
-                                                <Row>
-                                                    <Col xs={12} md={6} className="mb-3 mb-md-0">
-                                                        <h6>Seating</h6>
-                                                        <ul className="mb-0">
-                                                            <li>Section A (A1-A20): 1,000 seats each</li>
-                                                            <li>Section B (B1-B24): 2,000 seats each</li>
-                                                            <li>Total: 68,000 seats</li>
-                                                        </ul>
-                                                    </Col>
-                                                    <Col xs={12} md={6}>
-                                                        <h6>Pricing</h6>
-                                                        <ul className="mb-0">
-                                                            <li>Section A (A1-A20): $399 per seat</li>
-                                                            <li>Section B (B1-B24): $499 per seat</li>
-                                                        </ul>
-                                                    </Col>
-                                                </Row>
-                                            </Card.Body>
-                                        </Card>
-
-                                        <div className="d-grid gap-2 d-md-flex">
-                                            <Button
-                                                variant="primary"
-                                                type="submit"
+                            <Form onSubmit={handleSubmit}>
+                                <Row>
+                                    <Col xs={12} md={6} className="mb-3">
+                                        <Form.Group>
+                                            <Form.Label>Opponent Team *</Form.Label>
+                                            <Form.Control
+                                                type="text"
+                                                placeholder="Enter opponent name"
+                                                value={opponent}
+                                                onChange={(e) => setOpponent(e.target.value)}
+                                                required
                                                 disabled={loading}
-                                                className="flex-md-grow-1"
-                                            >
-                                                {loading ? 'Creating Event...' : 'Create Event'}
-                                            </Button>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={resetForm}
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col xs={12} md={6} className="mb-3">
+                                        <Form.Group>
+                                            <Form.Label>Match Date *</Form.Label>
+                                            <Form.Control
+                                                type="date"
+                                                value={eventDate}
+                                                onChange={(e) => setEventDate(e.target.value)}
+                                                required
                                                 disabled={loading}
-                                                className="flex-md-grow-1"
-                                            >
-                                                Reset Form
-                                            </Button>
-                                        </div>
-                                    </Form>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
+
+                                <Alert variant="info">
+                                    <Alert.Heading>Automatic Setup</Alert.Heading>
+                                    <p className="mb-0">
+                                        <strong>Sections:</strong> A1-A20 (1000 seats each @ $399) and B1-B24 (2000 seats each @ $499)
+                                        will be automatically created.
+                                    </p>
+                                </Alert>
+
+                                <Button variant="primary" type="submit" disabled={loading}>
+                                    {loading ? 'Creating Event...' : 'Create Event'}
+                                </Button>
+                            </Form>
+                        </Card.Body>
+                    </Card>
                 </Tab>
 
-                {/* MANAGE EVENTS TAB */}
                 <Tab eventKey="manage" title="Manage Events">
-                    <Card className="shadow">
-                        <Card.Header className="bg-success text-white">
-                            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                                <h3 className="mb-0">All Home Events</h3>
-                                <Button
-                                    variant="light"
-                                    size="sm"
-                                    onClick={fetchEvents}
-                                    disabled={loadingEvents}
-                                >
-                                    {loadingEvents ? 'Refreshing...' : 'Refresh'}
-                                </Button>
-                            </div>
-                        </Card.Header>
-                        <Card.Body className="p-3 p-md-4">
+                    <Card>
+                        <Card.Body>
                             {loadingEvents ? (
                                 <div className="text-center py-5">
                                     <Spinner animation="border" role="status">
@@ -545,49 +527,37 @@ export default function Admin() {
                                     <p className="mt-2">Loading events...</p>
                                 </div>
                             ) : events.length === 0 ? (
-                                <Alert variant="info">No home events found.</Alert>
+                                <Alert variant="info">
+                                    No events found. Create your first event in the "Create New Event" tab.
+                                </Alert>
                             ) : (
                                 <div className="table-responsive">
                                     <Table striped bordered hover>
                                         <thead>
                                             <tr>
-                                                <th className="d-none d-md-table-cell">ID</th>
+                                                <th>ID</th>
+                                                <th>Date</th>
                                                 <th>Opponent</th>
-                                                <th className="d-none d-lg-table-cell">Date</th>
-                                                <th className="d-none d-sm-table-cell">Status</th>
+                                                <th>Location</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.map(event => {
-                                                const eventDate = new Date(event.date);
-                                                const isPast = eventDate < new Date();
+                                            {events.map((event) => {
                                                 return (
                                                     <tr key={event.id}>
-                                                        <td className="d-none d-md-table-cell">{event.id}</td>
+                                                        <td>{event.id}</td>
+                                                        <td>{formatDate(event.date)}</td>
+                                                        <td>{event.Opponent}</td>
                                                         <td>
-                                                            <strong className="d-block">{event.Opponent}</strong>
-                                                            <small className="text-muted d-lg-none d-block">
-                                                                {formatDate(event.date)}
-                                                            </small>
-                                                        </td>
-                                                        <td className="d-none d-lg-table-cell">
-                                                            {formatDate(event.date)}
-                                                        </td>
-                                                        <td className="d-none d-sm-table-cell">
-                                                            {isPast ? (
-                                                                <Badge bg="secondary">Past</Badge>
-                                                            ) : (
-                                                                <Badge bg="success">Upcoming</Badge>
-                                                            )}
+                                                            <Badge bg="success">{event.Home_Away}</Badge>
                                                         </td>
                                                         <td>
-                                                            <div className="d-flex flex-column flex-sm-row gap-2">
+                                                            <div className="d-flex gap-2">
                                                                 <Button
                                                                     variant="warning"
                                                                     size="sm"
                                                                     onClick={() => handleEditClick(event)}
-                                                                    className="w-100 w-sm-auto"
                                                                 >
                                                                     Edit
                                                                 </Button>
@@ -595,7 +565,6 @@ export default function Admin() {
                                                                     variant="danger"
                                                                     size="sm"
                                                                     onClick={() => handleDeleteClick(event)}
-                                                                    className="w-100 w-sm-auto"
                                                                 >
                                                                     Delete
                                                                 </Button>
@@ -616,7 +585,7 @@ export default function Admin() {
             {/* EDIT EVENT MODAL */}
             <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
                 <Modal.Header closeButton>
-                    <Modal.Title>Edit Event</Modal.Title>
+                    <Modal.Title>Edit Event {editingEvent && `(ID: ${editingEvent.id})`}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     {editError && (
