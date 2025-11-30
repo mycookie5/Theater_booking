@@ -33,7 +33,6 @@ interface Price {
 export default function Admin() {
     const { isUserAdmin } = authUser();
 
-    // Create Form States
     const [opponent, setOpponent] = useState('');
     const [eventDate, setEventDate] = useState('');
     const [loading, setLoading] = useState(false);
@@ -41,12 +40,10 @@ export default function Admin() {
     const [success, setSuccess] = useState(false);
     const [createdEventId, setCreatedEventId] = useState<number | null>(null);
 
-    // Manage Events States
     const [activeTab, setActiveTab] = useState<string>('create');
     const [events, setEvents] = useState<Event[]>([]);
     const [loadingEvents, setLoadingEvents] = useState(false);
 
-    // Edit States
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [editOpponent, setEditOpponent] = useState('');
@@ -59,20 +56,17 @@ export default function Admin() {
     const [editError, setEditError] = useState<string | null>(null);
     const [editSuccess, setEditSuccess] = useState(false);
 
-    // Delete States
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [loadingDelete, setLoadingDelete] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
-    // Load events when switching to manage tab
     useEffect(() => {
         if (activeTab === 'manage') {
             fetchEvents();
         }
     }, [activeTab]);
 
-    // Generate sections A1-A20 and B1-B24
     const generateSections = (): string[] => {
         const sections: string[] = [];
         for (let i = 1; i <= 20; i++) {
@@ -84,12 +78,10 @@ export default function Admin() {
         return sections;
     };
 
-    // Get default seats count based on section (A=1000, B=2000)
     const getDefaultSeats = (section: string): number => {
         return section.startsWith('A') ? 1000 : 2000;
     };
 
-    // Get default price based on section (A=399, B=499)
     const getDefaultPrice = (section: string): number => {
         return section.startsWith('A') ? 399 : 499;
     };
@@ -102,7 +94,6 @@ export default function Admin() {
         setCreatedEventId(null);
     };
 
-    // Fetch all events
     const fetchEvents = async () => {
         setLoadingEvents(true);
         try {
@@ -111,7 +102,6 @@ export default function Admin() {
                 throw new Error('Failed to fetch events');
             }
             const data = await response.json();
-            // Filter only Home events
             const homeEvents = data.filter((event: Event) => event.Home_Away === 'Home');
             setEvents(homeEvents);
         } catch (err) {
@@ -121,7 +111,6 @@ export default function Admin() {
         }
     };
 
-    // Format date for display
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
@@ -131,7 +120,6 @@ export default function Admin() {
         });
     };
 
-    // Create Event Handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -145,7 +133,6 @@ export default function Admin() {
         setSuccess(false);
 
         try {
-            // Step 1: Create the event
             console.log('Creating event...');
             const eventResponse = await fetch('/api/events', {
                 method: 'POST',
@@ -171,7 +158,6 @@ export default function Admin() {
             console.log('Event created with ID:', eventId);
             setCreatedEventId(eventId);
 
-            // Step 2: Create seats for all sections
             console.log('Creating seats...');
             const sections = generateSections();
             const seatIds: { [section: string]: number } = {};
@@ -202,10 +188,9 @@ export default function Admin() {
                 }
 
                 seatIds[section] = seatId;
-                console.log(`Created seat for section ${section} with ID:`, seatId);
+                console.log(`Seat created for section ${section} with ID:`, seatId);
             }
 
-            // Step 3: Create prices for all sections
             console.log('Creating prices...');
             for (const section of sections) {
                 const seatId = seatIds[section];
@@ -225,7 +210,7 @@ export default function Admin() {
                     throw new Error(`Failed to create price for section ${section}`);
                 }
 
-                console.log(`Created price for section ${section}`);
+                console.log(`Price created for section ${section}: $${price}`);
             }
 
             setSuccess(true);
@@ -239,17 +224,15 @@ export default function Admin() {
         }
     };
 
-    // Edit Event Handlers
     const handleEditClick = async (event: Event) => {
         setEditingEvent(event);
         setEditOpponent(event.Opponent);
-        setEditEventDate(event.date.split('T')[0]); // Format date for input
+        setEditEventDate(event.date.split('T')[0]);
         setEditError(null);
         setEditSuccess(false);
         setSelectedSection('');
         setSectionPrice('');
 
-        // Fetch seats and prices for this event
         try {
             const [seatsResponse, pricesResponse] = await Promise.all([
                 fetch(`/api/seats?event_id=${event.id}`),
@@ -260,7 +243,6 @@ export default function Admin() {
                 const seatsData = await seatsResponse.json();
                 const pricesData = await pricesResponse.json();
 
-                // CRITICAL FIX: Filter seats and prices to ensure they belong to THIS event
                 const filteredSeats = seatsData.filter((s: Seat) => s.event_id === event.id);
                 const filteredPrices = pricesData.filter((p: Price) => p.event_id === event.id);
 
@@ -271,7 +253,6 @@ export default function Admin() {
             }
         } catch (err) {
             console.error('Error fetching event details:', err);
-            setEditError('Failed to load event details. Please try again.');
         }
 
         setShowEditModal(true);
@@ -285,11 +266,9 @@ export default function Admin() {
 
         setSelectedSection(section);
 
-        // CRITICAL FIX: Find the seat for this section AND verify it belongs to the current event
         const seat = editSeats.find(s => s.section === section && s.event_id === editingEvent.id);
 
         if (seat) {
-            // CRITICAL FIX: Find the price for this seat AND verify it belongs to the current event
             const price = editPrices.find(p =>
                 p.seat_id === seat.id &&
                 p.event_id === editingEvent.id
@@ -316,7 +295,6 @@ export default function Admin() {
         setEditSuccess(false);
 
         try {
-            // Update event basic info
             const eventResponse = await fetch(`/api/events/${editingEvent.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -331,16 +309,13 @@ export default function Admin() {
                 throw new Error('Failed to update event');
             }
 
-            // Update price if a section is selected and price is changed
             if (selectedSection && sectionPrice) {
-                // CRITICAL FIX: Find the seat AND verify it belongs to the current event
                 const seat = editSeats.find(s =>
                     s.section === selectedSection &&
                     s.event_id === editingEvent.id
                 );
 
                 if (seat) {
-                    // CRITICAL FIX: Find the price AND verify it belongs to the current event
                     const price = editPrices.find(p =>
                         p.seat_id === seat.id &&
                         p.event_id === editingEvent.id
@@ -354,7 +329,6 @@ export default function Admin() {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 price: parseFloat(sectionPrice),
-                                // Include these for additional validation on the backend
                                 event_id: editingEvent.id,
                                 seat_id: seat.id
                             })
@@ -374,24 +348,20 @@ export default function Admin() {
             }
 
             setEditSuccess(true);
+            fetchEvents();
 
-            // Refresh the events list
-            await fetchEvents();
-
-            // Close modal after a delay
             setTimeout(() => {
                 setShowEditModal(false);
             }, 1500);
 
         } catch (err) {
             console.error('Error updating event:', err);
-            setEditError(err instanceof Error ? err.message : 'An error occurred while updating the event');
+            setEditError(err instanceof Error ? err.message : 'Failed to update event');
         } finally {
             setLoadingEdit(false);
         }
     };
 
-    // Delete Event Handlers
     const handleDeleteClick = (event: Event) => {
         setDeletingEvent(event);
         setDeleteError(null);
@@ -413,14 +383,12 @@ export default function Admin() {
                 throw new Error('Failed to delete event');
             }
 
-            // Refresh the events list
-            await fetchEvents();
+            fetchEvents();
             setShowDeleteModal(false);
-            setDeletingEvent(null);
 
         } catch (err) {
             console.error('Error deleting event:', err);
-            setDeleteError(err instanceof Error ? err.message : 'An error occurred while deleting the event');
+            setDeleteError(err instanceof Error ? err.message : 'Failed to delete event');
         } finally {
             setLoadingDelete(false);
         }
@@ -428,7 +396,7 @@ export default function Admin() {
 
     if (!isUserAdmin) {
         return (
-            <Container className="mt-5">
+            <Container className="py-5">
                 <Alert variant="danger">
                     <Alert.Heading>Access Denied</Alert.Heading>
                     <p>You do not have permission to access this page.</p>
@@ -438,126 +406,239 @@ export default function Admin() {
     }
 
     return (
-        <Container className="mt-4">
-            <h1 className="mb-4">Event Management</h1>
+        <Container fluid className="py-3 py-sm-4 py-md-4 py-lg-5 px-2 px-sm-3 px-md-4">
+            <h1 className="mb-3 mb-sm-4 mb-md-4 mb-lg-5 text-center text-sm-start fs-4 fs-sm-3 fs-md-2">Event Management</h1>
 
             <Tabs
                 activeKey={activeTab}
                 onSelect={(k) => setActiveTab(k || 'create')}
-                className="mb-3"
+                className="mb-3 mb-sm-4 mb-md-4 mb-lg-5"
             >
-                <Tab eventKey="create" title="Create New Event">
-                    <Card>
-                        <Card.Body>
-                            {error && (
-                                <Alert variant="danger" dismissible onClose={() => setError(null)}>
-                                    {error}
-                                </Alert>
-                            )}
+                {/* CREATE EVENT TAB */}
+                <Tab eventKey="create" title="Create Event">
+                    <Row className="justify-content-center">
+                        <Col xs={12} sm={12} md={11} lg={10} xl={8}>
+                            <Card className="shadow-sm shadow-md-lg">
+                                <Card.Header className="bg-primary text-white p-2 p-sm-3 p-md-3 p-lg-4">
+                                    <h3 className="mb-0 fs-6 fs-sm-5 fs-md-4 fs-lg-3">Create New Event</h3>
+                                </Card.Header>
+                                <Card.Body className="p-2 p-sm-3 p-md-3 p-lg-4">
+                                    {error && (
+                                        <Alert variant="danger" dismissible onClose={() => setError(null)}>
+                                            {error}
+                                        </Alert>
+                                    )}
 
-                            {success && (
-                                <Alert variant="success" dismissible onClose={() => setSuccess(false)}>
-                                    <Alert.Heading>Success!</Alert.Heading>
-                                    <p>
-                                        Event created successfully with all seats and pricing!
-                                        {createdEventId && <><br /><strong>Event ID:</strong> {createdEventId}</>}
-                                    </p>
-                                    <hr />
-                                    <div className="d-flex justify-content-end">
-                                        <Button onClick={resetForm} variant="outline-success">
-                                            Create Another Event
-                                        </Button>
-                                    </div>
-                                </Alert>
-                            )}
+                                    {success && (
+                                        <Alert variant="success">
+                                            <Alert.Heading>Success!</Alert.Heading>
+                                            <p>Event created successfully with ID: {createdEventId}</p>
+                                            <ul className="mb-0">
+                                                <li>44 sections created (A1-A20, B1-B24)</li>
+                                                <li>Total capacity: 68,000 seats</li>
+                                                <li>All seats available for booking</li>
+                                            </ul>
+                                        </Alert>
+                                    )}
 
-                            <Form onSubmit={handleSubmit}>
-                                <Row>
-                                    <Col xs={12} md={6} className="mb-3">
-                                        <Form.Group>
-                                            <Form.Label>Opponent Team *</Form.Label>
-                                            <Form.Control
-                                                type="text"
-                                                placeholder="Enter opponent name"
-                                                value={opponent}
-                                                onChange={(e) => setOpponent(e.target.value)}
-                                                required
+                                    <Form onSubmit={handleSubmit}>
+                                        <Row className="g-2 g-sm-3">
+                                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
+                                                <Form.Group>
+                                                    <Form.Label className="fw-semibold small">Opponent Team *</Form.Label>
+                                                    <Form.Control
+                                                        type="text"
+                                                        placeholder="Enter opponent name"
+                                                        value={opponent}
+                                                        onChange={(e) => setOpponent(e.target.value)}
+                                                        disabled={loading}
+                                                        required
+                                                        size="lg"
+                                                    />
+                                                </Form.Group>
+                                            </Col>
+                                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
+                                                <Form.Group>
+                                                    <Form.Label className="fw-semibold small">Match Date *</Form.Label>
+                                                    <Form.Control
+                                                        type="date"
+                                                        value={eventDate}
+                                                        onChange={(e) => setEventDate(e.target.value)}
+                                                        disabled={loading}
+                                                        required
+                                                        size="lg"
+                                                    />
+                                                </Form.Group>
+                                            </Col>
+                                        </Row>
+
+                                        <Row className="mb-2 mb-sm-3 g-2 g-sm-3">
+                                            <Col xs={12} sm={12} md={6}>
+                                                <Form.Group>
+                                                    <Form.Label className="fw-semibold small">Home/Away</Form.Label>
+                                                    <Form.Control
+                                                        type="text"
+                                                        value="Home"
+                                                        disabled
+                                                        readOnly
+                                                        size="lg"
+                                                    />
+                                                    <Form.Text className="text-muted small">
+                                                        Always set to Home (default)
+                                                    </Form.Text>
+                                                </Form.Group>
+                                            </Col>
+                                        </Row>
+
+                                        <Card className="bg-light mb-2 mb-sm-3 mb-md-3 mb-lg-4 border-0">
+                                            <Card.Body className="p-2 p-sm-3 p-md-3 p-lg-4">
+                                                <h5 className="mb-2 mb-sm-3 fs-6 fs-sm-6 fs-md-5">Default Configuration</h5>
+                                                <Row className="g-2 g-sm-3">
+                                                    <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-2 mb-md-0">
+                                                        <h6 className="fs-6 fw-semibold">Seating</h6>
+                                                        <ul className="mb-0 small">
+                                                            <li className="mb-1">Section A (A1-A20): 1,000 seats each</li>
+                                                            <li className="mb-1">Section B (B1-B24): 2,000 seats each</li>
+                                                            <li>Total: 68,000 seats</li>
+                                                        </ul>
+                                                    </Col>
+                                                    <Col xs={12} sm={12} md={6}>
+                                                        <h6 className="fs-6 fw-semibold">Pricing</h6>
+                                                        <ul className="mb-0 small">
+                                                            <li className="mb-1">Section A (A1-A20): $399 per seat</li>
+                                                            <li className="mb-1">Section B (B1-B24): $499 per seat</li>
+                                                        </ul>
+                                                    </Col>
+                                                </Row>
+                                            </Card.Body>
+                                        </Card>
+
+                                        <div className="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                                            <Button
+                                                variant="secondary"
+                                                onClick={resetForm}
                                                 disabled={loading}
-                                            />
-                                        </Form.Group>
-                                    </Col>
-                                    <Col xs={12} md={6} className="mb-3">
-                                        <Form.Group>
-                                            <Form.Label>Match Date *</Form.Label>
-                                            <Form.Control
-                                                type="date"
-                                                value={eventDate}
-                                                onChange={(e) => setEventDate(e.target.value)}
-                                                required
+                                                className="order-2 order-sm-1"
+                                                size="lg"
+                                            >
+                                                Reset Form
+                                            </Button>
+                                            <Button
+                                                variant="primary"
+                                                type="submit"
                                                 disabled={loading}
-                                            />
-                                        </Form.Group>
-                                    </Col>
-                                </Row>
-
-                                <Alert variant="info">
-                                    <Alert.Heading>Automatic Setup</Alert.Heading>
-                                    <p className="mb-0">
-                                        <strong>Sections:</strong> A1-A20 (1000 seats each @ $399) and B1-B24 (2000 seats each @ $499)
-                                        will be automatically created.
-                                    </p>
-                                </Alert>
-
-                                <Button variant="primary" type="submit" disabled={loading}>
-                                    {loading ? 'Creating Event...' : 'Create Event'}
-                                </Button>
-                            </Form>
-                        </Card.Body>
-                    </Card>
+                                                className="order-1 order-sm-2"
+                                                size="lg"
+                                            >
+                                                {loading ? 'Creating Event...' : 'Create Event'}
+                                            </Button>
+                                        </div>
+                                    </Form>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
                 </Tab>
 
+                {/* MANAGE EVENTS TAB */}
                 <Tab eventKey="manage" title="Manage Events">
-                    <Card>
-                        <Card.Body>
+                    <Card className="shadow-sm shadow-md-lg">
+                        <Card.Header className="bg-success text-white p-2 p-sm-3 p-md-3 p-lg-4">
+                            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                <h3 className="mb-0 fs-6 fs-sm-5 fs-md-4 fs-lg-3">All Home Events</h3>
+                                <Button
+                                    variant="light"
+                                    size="sm"
+                                    onClick={fetchEvents}
+                                    disabled={loadingEvents}
+                                    className="w-100 w-sm-auto px-3"
+                                >
+                                    {loadingEvents ? (
+                                        <>
+                                            <Spinner
+                                                as="span"
+                                                animation="border"
+                                                size="sm"
+                                                role="status"
+                                                aria-hidden="true"
+                                                className="me-2"
+                                            />
+                                            Refreshing...
+                                        </>
+                                    ) : (
+                                        'Refresh'
+                                    )}
+                                </Button>
+                            </div>
+                        </Card.Header>
+                        <Card.Body className="p-2 p-sm-3 p-md-3 p-lg-4">
                             {loadingEvents ? (
-                                <div className="text-center py-5">
-                                    <Spinner animation="border" role="status">
+                                <div className="text-center py-4 py-sm-5">
+                                    <Spinner animation="border" role="status" variant="primary">
                                         <span className="visually-hidden">Loading...</span>
                                     </Spinner>
-                                    <p className="mt-2">Loading events...</p>
+                                    <p className="mt-3 text-muted small">Loading events...</p>
                                 </div>
                             ) : events.length === 0 ? (
-                                <Alert variant="info">
-                                    No events found. Create your first event in the "Create New Event" tab.
+                                <Alert variant="info" className="mb-0">
+                                    <div className="d-flex align-items-center">
+                                        <i className="bi bi-info-circle me-2"></i>
+                                        <span>No home events found. Create your first event!</span>
+                                    </div>
                                 </Alert>
                             ) : (
                                 <div className="table-responsive">
-                                    <Table striped bordered hover>
-                                        <thead>
+                                    <Table striped bordered hover className="mb-0">
+                                        <thead className="table-light">
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Date</th>
-                                                <th>Opponent</th>
-                                                <th>Location</th>
-                                                <th>Actions</th>
+                                                <th className="d-none d-md-table-cell small">ID</th>
+                                                <th className="small">Opponent</th>
+                                                <th className="d-none d-lg-table-cell small">Date</th>
+                                                <th className="d-none d-sm-table-cell small text-center">Status</th>
+                                                <th className="small text-center">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.map((event) => {
+                                            {events.map(event => {
+                                                const eventDate = new Date(event.date);
+                                                const isPast = eventDate < new Date();
                                                 return (
                                                     <tr key={event.id}>
-                                                        <td>{event.id}</td>
-                                                        <td>{formatDate(event.date)}</td>
-                                                        <td>{event.Opponent}</td>
-                                                        <td>
-                                                            <Badge bg="success">{event.Home_Away}</Badge>
+                                                        <td className="d-none d-md-table-cell align-middle">
+                                                            <Badge bg="secondary" className="font-monospace">{event.id}</Badge>
                                                         </td>
-                                                        <td>
-                                                            <div className="d-flex gap-2">
+                                                        <td className="align-middle">
+                                                            <div>
+                                                                <strong className="d-block mb-1">{event.Opponent}</strong>
+                                                                <small className="text-muted d-lg-none d-block">
+                                                                    {formatDate(event.date)}
+                                                                </small>
+                                                                <small className="d-sm-none">
+                                                                    {isPast ? (
+                                                                        <Badge bg="secondary" className="mt-1">Past</Badge>
+                                                                    ) : (
+                                                                        <Badge bg="success" className="mt-1">Upcoming</Badge>
+                                                                    )}
+                                                                </small>
+                                                            </div>
+                                                        </td>
+                                                        <td className="d-none d-lg-table-cell align-middle">
+                                                            {formatDate(event.date)}
+                                                        </td>
+                                                        <td className="d-none d-sm-table-cell align-middle text-center">
+                                                            {isPast ? (
+                                                                <Badge bg="secondary">Past</Badge>
+                                                            ) : (
+                                                                <Badge bg="success">Upcoming</Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="align-middle">
+                                                            <div className="d-flex flex-column flex-sm-row gap-1 gap-sm-2 justify-content-center">
                                                                 <Button
                                                                     variant="warning"
                                                                     size="sm"
                                                                     onClick={() => handleEditClick(event)}
+                                                                    className="w-100 w-sm-auto"
                                                                 >
                                                                     Edit
                                                                 </Button>
@@ -565,6 +646,7 @@ export default function Admin() {
                                                                     variant="danger"
                                                                     size="sm"
                                                                     onClick={() => handleDeleteClick(event)}
+                                                                    className="w-100 w-sm-auto"
                                                                 >
                                                                     Delete
                                                                 </Button>
@@ -583,64 +665,75 @@ export default function Admin() {
             </Tabs>
 
             {/* EDIT EVENT MODAL */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
-                <Modal.Header closeButton>
-                    <Modal.Title>Edit Event {editingEvent && `(ID: ${editingEvent.id})`}</Modal.Title>
+            <Modal
+                show={showEditModal}
+                onHide={() => setShowEditModal(false)}
+                size="lg"
+                centered
+                fullscreen="sm-down"
+            >
+                <Modal.Header closeButton className="border-bottom">
+                    <Modal.Title className="fs-5 fs-sm-4">
+                        Edit Event
+                        {editingEvent && <small className="text-muted d-block fs-6"> ID: {editingEvent.id}</small>}
+                    </Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="p-2 p-sm-3 p-md-4">
                     {editError && (
-                        <Alert variant="danger" dismissible onClose={() => setEditError(null)}>
-                            {editError}
+                        <Alert variant="danger" dismissible onClose={() => setEditError(null)} className="mb-3">
+                            <strong>Error:</strong> {editError}
                         </Alert>
                     )}
 
                     {editSuccess && (
-                        <Alert variant="success">
-                            Event updated successfully!
+                        <Alert variant="success" className="mb-3">
+                            <strong>Success!</strong> Event updated successfully!
                         </Alert>
                     )}
 
                     <Form>
-                        <Row>
-                            <Col xs={12} md={6} className="mb-3">
+                        <Row className="g-2 g-sm-3">
+                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
                                 <Form.Group>
-                                    <Form.Label>Opponent Team</Form.Label>
+                                    <Form.Label className="fw-semibold small">Opponent Team</Form.Label>
                                     <Form.Control
                                         type="text"
                                         value={editOpponent}
                                         onChange={(e) => setEditOpponent(e.target.value)}
                                         disabled={loadingEdit}
+                                        size="lg"
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col xs={12} md={6} className="mb-3">
+                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
                                 <Form.Group>
-                                    <Form.Label>Match Date</Form.Label>
+                                    <Form.Label className="fw-semibold small">Match Date</Form.Label>
                                     <Form.Control
                                         type="date"
                                         value={editEventDate}
                                         onChange={(e) => setEditEventDate(e.target.value)}
                                         disabled={loadingEdit}
+                                        size="lg"
                                     />
                                 </Form.Group>
                             </Col>
                         </Row>
 
-                        <hr />
+                        <hr className="my-3" />
 
-                        <h5 className="mb-3">Edit Section Pricing</h5>
-                        <Row>
-                            <Col xs={12} md={6} className="mb-3">
+                        <h5 className="mb-2 mb-sm-3 fs-6 fs-sm-5">Edit Section Pricing</h5>
+                        <Row className="g-2 g-sm-3">
+                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
                                 <Form.Group>
-                                    <Form.Label>Select Section</Form.Label>
+                                    <Form.Label className="fw-semibold small">Select Section</Form.Label>
                                     <Form.Select
                                         value={selectedSection}
                                         onChange={(e) => handleSectionChange(e.target.value)}
                                         disabled={loadingEdit}
+                                        size="lg"
                                     >
                                         <option value="">Choose a section...</option>
                                         {editSeats.sort((a, b) => {
-                                            // Sort sections properly (A1, A2, ..., A20, B1, ..., B24)
                                             const aNum = parseInt(a.section.substring(1));
                                             const bNum = parseInt(b.section.substring(1));
                                             if (a.section[0] === b.section[0]) {
@@ -649,15 +742,15 @@ export default function Admin() {
                                             return a.section[0] < b.section[0] ? -1 : 1;
                                         }).map(seat => (
                                             <option key={seat.id} value={seat.section}>
-                                                {seat.section} ({seat.total_seats} seats, {seat.available_seats} available)
+                                                {seat.section} ({seat.total_seats.toLocaleString()} seats, {seat.available_seats.toLocaleString()} available)
                                             </option>
                                         ))}
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
-                            <Col xs={12} md={6} className="mb-3">
+                            <Col xs={12} sm={12} md={6} className="mb-2 mb-sm-3">
                                 <Form.Group>
-                                    <Form.Label>Price ($)</Form.Label>
+                                    <Form.Label className="fw-semibold small">Price ($)</Form.Label>
                                     <Form.Control
                                         type="number"
                                         value={sectionPrice}
@@ -666,24 +759,25 @@ export default function Admin() {
                                         placeholder="Select a section first"
                                         min="0"
                                         step="0.01"
+                                        size="lg"
                                     />
                                 </Form.Group>
                             </Col>
                         </Row>
 
-                        <Alert variant="info" className="mb-0">
-                            <small>
-                                <strong>Note:</strong> Total seats and available seats cannot be modified.
-                                Select a section from the dropdown to update its price.
-                            </small>
+                        <Alert variant="info" className="mb-0 small">
+                            <strong>Note:</strong> Total seats and available seats cannot be modified.
+                            Select a section from the dropdown to update its price one at a time.
                         </Alert>
                     </Form>
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer className="d-flex flex-column-reverse flex-sm-row gap-2 p-2 p-sm-3 p-md-4 border-top">
                     <Button
                         variant="secondary"
                         onClick={() => setShowEditModal(false)}
                         disabled={loadingEdit}
+                        className="w-100 w-sm-auto"
+                        size="lg"
                     >
                         Cancel
                     </Button>
@@ -691,46 +785,71 @@ export default function Admin() {
                         variant="primary"
                         onClick={handleUpdateEvent}
                         disabled={loadingEdit}
+                        className="w-100 w-sm-auto"
+                        size="lg"
                     >
-                        {loadingEdit ? 'Updating...' : 'Update Event'}
+                        {loadingEdit ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                />
+                                Updating...
+                            </>
+                        ) : (
+                            'Update Event'
+                        )}
                     </Button>
                 </Modal.Footer>
             </Modal>
 
             {/* DELETE CONFIRMATION MODAL */}
-            <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Confirm Delete</Modal.Title>
+            <Modal
+                show={showDeleteModal}
+                onHide={() => setShowDeleteModal(false)}
+                centered
+                fullscreen="sm-down"
+            >
+                <Modal.Header closeButton className="border-bottom bg-danger text-white">
+                    <Modal.Title className="fs-5 fs-sm-4">Confirm Delete</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="p-2 p-sm-3 p-md-4">
                     {deleteError && (
-                        <Alert variant="danger" dismissible onClose={() => setDeleteError(null)}>
-                            {deleteError}
+                        <Alert variant="danger" dismissible onClose={() => setDeleteError(null)} className="mb-3">
+                            <strong>Error:</strong> {deleteError}
                         </Alert>
                     )}
 
-                    <p>Are you sure you want to delete this event?</p>
+                    <p className="fw-semibold mb-3">Are you sure you want to delete this event?</p>
                     {deletingEvent && (
-                        <Card className="bg-light">
-                            <Card.Body>
-                                <strong>Opponent:</strong> {deletingEvent.Opponent}<br />
-                                <strong>Date:</strong> {formatDate(deletingEvent.date)}<br />
-                                <strong>ID:</strong> {deletingEvent.id}
+                        <Card className="bg-light mb-3 border-0">
+                            <Card.Body className="p-2 p-sm-3">
+                                <div className="d-flex flex-column gap-2">
+                                    <div><strong>Opponent:</strong> <span className="text-primary">{deletingEvent.Opponent}</span></div>
+                                    <div><strong>Date:</strong> <span className="text-muted">{formatDate(deletingEvent.date)}</span></div>
+                                    <div><strong>ID:</strong> <Badge bg="secondary">{deletingEvent.id}</Badge></div>
+                                </div>
                             </Card.Body>
                         </Card>
                     )}
-                    <Alert variant="warning" className="mt-3 mb-0">
-                        <small>
+                    <Alert variant="warning" className="mb-0">
+                        <div className="small">
                             <strong>Warning:</strong> This will also delete all associated seats and prices.
-                            This action cannot be undone.
-                        </small>
+                            This action <strong>cannot be undone</strong>.
+                        </div>
                     </Alert>
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer className="d-flex flex-column-reverse flex-sm-row gap-2 p-2 p-sm-3 p-md-4 border-top">
                     <Button
                         variant="secondary"
                         onClick={() => setShowDeleteModal(false)}
                         disabled={loadingDelete}
+                        className="w-100 w-sm-auto"
+                        size="lg"
                     >
                         Cancel
                     </Button>
@@ -738,20 +857,36 @@ export default function Admin() {
                         variant="danger"
                         onClick={handleConfirmDelete}
                         disabled={loadingDelete}
+                        className="w-100 w-sm-auto"
+                        size="lg"
                     >
-                        {loadingDelete ? 'Deleting...' : 'Delete Event'}
+                        {loadingDelete ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                />
+                                Deleting...
+                            </>
+                        ) : (
+                            'Delete Event'
+                        )}
                     </Button>
                 </Modal.Footer>
             </Modal>
 
             {/* LOADING MODAL */}
-            <Modal show={loading} backdrop="static" keyboard={false} centered>
-                <Modal.Body className="text-center py-4">
-                    <div className="spinner-border text-primary mb-3" role="status">
+            <Modal show={loading} backdrop="static" keyboard={false} centered size="sm">
+                <Modal.Body className="text-center py-3 py-sm-4 px-3 px-sm-4">
+                    <Spinner animation="border" variant="primary" className="mb-3" >
                         <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <h5>Creating Event</h5>
-                    <p className="mb-0 text-muted">
+                    </Spinner>
+                    <h5 className="mb-2 fs-6 fs-sm-5">Creating Event</h5>
+                    <p className="mb-0 text-muted small">
                         Please wait while we set up your event...
                     </p>
                 </Modal.Body>
