@@ -10,7 +10,7 @@ export interface UserData {
     role: string;
 }
 
-export default function authUser() {
+export default function useAuthUser() {
     const [isUserAdmin, setIsUserAdmin] = useState<boolean>(false);
     const [userData, setUserData] = useState<UserData | null>(null);
     useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
-import authUser from '../hooks/authUser';
+import useAuthUser from '../hooks/useAuthUser';
 
 Booking.route = {
     path: '/booking/:id',
@@ -22,7 +22,7 @@ interface MatchInfo {
 export default function Booking() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { userData } = authUser();
+    const { userData } = useAuthUser();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [seatCount, setSeatCount] = useState<number>(0);
