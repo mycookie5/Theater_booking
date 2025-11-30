@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Modal, Spinner, Alert } from 'react-bootstrap';
-import authUser from '../hooks/authUser';
+import useAuthUser from '../hooks/useAuthUser';
 
 MyTickets.route = {
     path: '/mytickets',
@@ -23,7 +23,7 @@ interface TicketWithDetails extends Ticket {
 }
 
 export default function MyTickets() {
-    const { userData } = authUser();
+    const { userData } = useAuthUser();
     const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
@@ -164,7 +164,7 @@ export default function MyTickets() {
 
             {loading ? (
                 <div className="text-center py-4 py-sm-5">
-                    <Spinner animation="border" variant="primary" className="mb-3" style={{ width: '3rem', height: '3rem' }}>
+                    <Spinner animation="border" variant="primary" className="mb-3" >
                         <span className="visually-hidden">Loading...</span>
                     </Spinner>
                     <p className="text-muted small">Loading your tickets...</p>
@@ -196,7 +196,7 @@ export default function MyTickets() {
                     </Col>
                 </Row>
             ) : (
-                <Row xs={1} sm={1} md={2} lg={3} xl={4} className="g-3 g-sm-3 g-md-4">
+                <Row xs={1} sm={1} md={2} lg={3} xl={3} className="g-3 g-sm-3 g-md-4 row-cols-xl-3">
                     {tickets.map(ticket => (
                         <Col key={ticket.id}>
                             <Card className="h-100 shadow-sm border-0 overflow-hidden">
@@ -213,7 +213,7 @@ export default function MyTickets() {
                                         </div>
                                         <div className="ms-2">
                                             <div className="bg-white rounded-circle d-flex align-items-center justify-content-center"
-                                                style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                                            >
                                                 <svg
                                                     width="24"
                                                     height="24"
@@ -229,13 +229,12 @@ export default function MyTickets() {
                                 </div>
 
                                 {/* Perforation Effect */}
-                                <div className="position-relative bg-white" style={{ height: '12px' }}>
+                                <div className="position-relative bg-white">
                                     <div className="position-absolute top-50 start-0 translate-middle-y w-100 d-flex justify-content-around">
                                         {[...Array(12)].map((_, i) => (
                                             <div
                                                 key={i}
                                                 className="bg-light rounded-circle"
-                                                style={{ width: '8px', height: '8px' }}
                                             />
                                         ))}
                                     </div>

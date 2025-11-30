@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button, Container, Row, Col, Card, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import authUser from '../hooks/authUser';
+import useAuthUser from '../hooks/useAuthUser';
 
 Events.route = {
     path: '/events',
@@ -18,7 +18,7 @@ interface Event {
 
 export default function Events() {
     const navigate = useNavigate();
-    const { userData } = authUser();
+    const { userData } = useAuthUser();
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState<string>('');
