@@ -13,7 +13,14 @@ The React Compiler is not enabled on this template because of its impact on dev 
 
 ## Expanding the ESLint configuration
 
-## All the passwords for the accounts are 12345678
+## All the passwords for the demo accounts are 12345678
+
+To login as admin use
+```js
+  email: "thomas@nodehill.com",
+  password: "12345678"
+
+```
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
