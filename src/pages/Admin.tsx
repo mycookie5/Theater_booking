@@ -48,6 +48,7 @@ export default function Admin() {
     // Create Form States
     const [opponent, setOpponent] = useState('');
     const [eventDate, setEventDate] = useState('');
+    const [eventTime, setEventTime] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -63,6 +64,7 @@ export default function Admin() {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [editOpponent, setEditOpponent] = useState('');
     const [editEventDate, setEditEventDate] = useState('');
+    const [editEventTime, setEditEventTime] = useState('');
     const [editSeats, setEditSeats] = useState<Seat[]>([]);
     const [editPrices, setEditPrices] = useState<Price[]>([]);
     const [selectedSection, setSelectedSection] = useState('');
@@ -117,6 +119,7 @@ export default function Admin() {
     const resetForm = () => {
         setOpponent('');
         setEventDate('');
+        setEventTime('');
         setError(null);
         setSuccess(false);
         setCreatedEventId(null);
@@ -160,10 +163,24 @@ export default function Admin() {
 
     // Format date for display
     const formatDate = (dateString: string): string => {
+        // Check if the dateString contains time (format: "YYYY-MM-DD HH:MM")
+        if (dateString.includes(' ')) {
+            const [datePart, timePart] = dateString.split(' ');
+            const date = new Date(datePart);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+            return `${formattedDate} at ${timePart}`;
+        }
+        // Original behavior for date-only strings
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
+            weekday: 'short',
             year: 'numeric',
-            month: 'long',
+            month: 'short',
             day: 'numeric'
         });
     };
@@ -172,7 +189,7 @@ export default function Admin() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!opponent || !eventDate) {
+        if (!opponent || !eventDate || !eventTime) {
             setError('Please fill in all required fields');
             return;
         }
@@ -182,13 +199,16 @@ export default function Admin() {
         setSuccess(false);
 
         try {
+            // Combine date and time into a single string
+            const dateTimeString = `${eventDate} ${eventTime}`;
+
             // Step 1: Create the event
             console.log('Creating event...');
             const eventResponse = await fetch('/api/events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    date: eventDate,
+                    date: dateTimeString,
                     Opponent: opponent,
                     Home_Away: 'Home'
                 })
@@ -281,7 +301,17 @@ export default function Admin() {
     const handleEditClick = async (event: Event) => {
         setEditingEvent(event);
         setEditOpponent(event.Opponent);
-        setEditEventDate(event.date.split('T')[0]); // Format date for input
+
+        // Split date and time if time is present
+        if (event.date.includes(' ')) {
+            const [datePart, timePart] = event.date.split(' ');
+            setEditEventDate(datePart);
+            setEditEventTime(timePart);
+        } else {
+            setEditEventDate(event.date.split('T')[0]); // Format date for input
+            setEditEventTime('19:00'); // Default time for old events
+        }
+
         setEditError(null);
         setEditSuccess(false);
         setSelectedSection('');
@@ -353,12 +383,15 @@ export default function Admin() {
         setEditSuccess(false);
 
         try {
+            // Combine date and time into a single string
+            const dateTimeString = `${editEventDate} ${editEventTime}`;
+
             // Update event basic info
             const eventResponse = await fetch(`/api/events/${editingEvent.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    date: editEventDate,
+                    date: dateTimeString,
                     Opponent: editOpponent,
                     Home_Away: 'Home'
                 })
@@ -569,13 +602,25 @@ export default function Admin() {
                                                     />
                                                 </Form.Group>
                                             </Col>
-                                            <Col xs={12} md={6} className="mb-3">
+                                            <Col xs={12} md={3} className="mb-3">
                                                 <Form.Group>
                                                     <Form.Label>Match Date *</Form.Label>
                                                     <Form.Control
                                                         type="date"
                                                         value={eventDate}
                                                         onChange={(e) => setEventDate(e.target.value)}
+                                                        disabled={loading}
+                                                        required
+                                                    />
+                                                </Form.Group>
+                                            </Col>
+                                            <Col xs={12} md={3} className="mb-3">
+                                                <Form.Group>
+                                                    <Form.Label>Match Time *</Form.Label>
+                                                    <Form.Control
+                                                        type="time"
+                                                        value={eventTime}
+                                                        onChange={(e) => setEventTime(e.target.value)}
                                                         disabled={loading}
                                                         required
                                                     />
@@ -691,7 +736,6 @@ export default function Admin() {
                                                 <th className="d-none d-md-table-cell">ID</th>
                                                 <th>Opponent</th>
                                                 <th className="d-none d-lg-table-cell">Date</th>
-                                                <th className="d-none d-sm-table-cell">Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -710,13 +754,6 @@ export default function Admin() {
                                                         </td>
                                                         <td className="d-none d-lg-table-cell">
                                                             {formatDate(event.date)}
-                                                        </td>
-                                                        <td className="d-none d-sm-table-cell">
-                                                            {isPast ? (
-                                                                <Badge bg="secondary">Past</Badge>
-                                                            ) : (
-                                                                <Badge bg="success">Upcoming</Badge>
-                                                            )}
                                                         </td>
                                                         <td>
                                                             <div className="d-flex flex-column flex-sm-row gap-2">
@@ -968,7 +1005,7 @@ export default function Admin() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col xs={12} md={6} className="mb-3">
+                            <Col xs={12} md={3} className="mb-3">
                                 <Form.Group>
                                     <Form.Label>Match Date</Form.Label>
                                     <Form.Control
@@ -976,6 +1013,18 @@ export default function Admin() {
                                         value={editEventDate}
                                         onChange={(e) => setEditEventDate(e.target.value)}
                                         disabled={loadingEdit}
+                                    />
+                                </Form.Group>
+                            </Col>
+                            <Col xs={12} md={3} className="mb-3">
+                                <Form.Group>
+                                    <Form.Label>Match Time *</Form.Label>
+                                    <Form.Control
+                                        type="time"
+                                        value={editEventTime}
+                                        onChange={(e) => setEditEventTime(e.target.value)}
+                                        disabled={loadingEdit}
+                                        required
                                     />
                                 </Form.Group>
                             </Col>

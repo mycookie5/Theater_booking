@@ -266,11 +266,25 @@ export default function Booking() {
                                     </Col>
                                     <Col md={6}>
                                         <p className="mb-2">
-                                            <strong>Date:</strong> {new Date(matchDetails.date).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric'
-                                            })}
+                                            <strong>Date:</strong> {(() => {
+                                                const dateString = matchDetails.date;
+                                                if (dateString.includes(' ')) {
+                                                    const [datePart, timePart] = dateString.split(' ');
+                                                    const date = new Date(datePart);
+                                                    const formattedDate = date.toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    });
+                                                    return `${formattedDate} at ${timePart}`;
+                                                }
+                                                const date = new Date(dateString);
+                                                return date.toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                });
+                                            })()}
                                         </p>
                                     </Col>
                                 </Row>
