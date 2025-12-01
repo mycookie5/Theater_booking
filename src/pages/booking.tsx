@@ -48,7 +48,7 @@ export default function Booking() {
                 console.log('Parsed eventId:', eventId);
                 console.log('Data for this event:', data.filter(seat => seat.event_id === eventId));
                 const availableSeats = data
-                    .filter(seat => seat.event_id === eventId && seat.available_seats > 0)
+                    .filter(seat => seat.event_id === eventId)
                     .sort((a, b) => {
                         const aRow = a.section.charAt(0);
                         const bRow = b.section.charAt(0);
@@ -266,11 +266,25 @@ export default function Booking() {
                                     </Col>
                                     <Col md={6}>
                                         <p className="mb-2">
-                                            <strong>Date:</strong> {new Date(matchDetails.date).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric'
-                                            })}
+                                            <strong>Date:</strong> {(() => {
+                                                const dateString = matchDetails.date;
+                                                if (dateString.includes(' ')) {
+                                                    const [datePart, timePart] = dateString.split(' ');
+                                                    const date = new Date(datePart);
+                                                    const formattedDate = date.toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    });
+                                                    return `${formattedDate} at ${timePart}`;
+                                                }
+                                                const date = new Date(dateString);
+                                                return date.toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                });
+                                            })()}
                                         </p>
                                     </Col>
                                 </Row>
@@ -314,28 +328,29 @@ export default function Booking() {
                                             {matchInfo.map((seat) => (
                                                 <Button
                                                     key={seat.unique_id}
-                                                    variant={selectedSection === seat.section ? 'primary' : 'outline-secondary'}
+                                                    variant={selectedSection === seat.section ? 'primary' : seat.available_seats === 0 ? 'secondary' : 'outline-secondary'}
                                                     onClick={() => handleSectionSelect(seat.section)}
+                                                    disabled={seat.available_seats === 0}
                                                     className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center seat-btn rounded-2"
                                                 >
                                                     <span className="fw-bold fs-5">
                                                         {seat.section}
                                                     </span>
                                                     <small
-                                                        className={`${selectedSection === seat.section ? 'text-white-50' : 'text-muted'} seat-info`}
+                                                        className={`${selectedSection === seat.section ? 'text-white-50' : seat.available_seats === 0 ? 'text-white-50' : 'text-muted'} seat-info`}
                                                     >
-                                                        {seat.available_seats} seats
+                                                        {seat.available_seats === 0 ? 'Sold Out' : `${seat.available_seats} seats`}
                                                     </small>
                                                     {seat.price > 0 && (
                                                         <small
-                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
+                                                            className={`${selectedSection === seat.section ? 'text-white' : seat.available_seats === 0 ? 'text-white-50' : 'text-success'} fw-bold seat-price`}
                                                         >
                                                             ${seat.price}
                                                         </small>
                                                     )}
                                                     {seat.price === 0 && (
                                                         <small
-                                                            className={`${selectedSection === seat.section ? 'text-white' : 'text-success'} fw-bold seat-price`}
+                                                            className={`${selectedSection === seat.section ? 'text-white' : seat.available_seats === 0 ? 'text-white-50' : 'text-success'} fw-bold seat-price`}
                                                         >
                                                             FREE
                                                         </small>

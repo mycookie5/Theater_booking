@@ -108,6 +108,19 @@ export default function MyTickets() {
     };
 
     const formatDate = (dateString: string) => {
+        // Check if the dateString contains time (format: "YYYY-MM-DD HH:MM")
+        if (dateString.includes(' ')) {
+            const [datePart, timePart] = dateString.split(' ');
+            const date = new Date(datePart);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+            return `${formattedDate} at ${timePart}`;
+        }
+        // Original behavior for date-only strings
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
